@@ -16,7 +16,7 @@ Default mosque: **Masjid Al Falah Coventry** (`masjid-al-falah-coventry`).
 3. Open the **Actions** tab. A "Build APK" run starts on its own and takes about 5 minutes.
    When it's green, your APK is at:
 
-   `https://github.com/<your-username>/iqama-times/releases/download/latest/iqama-times.apk`
+   `https://github.com/Midgetmcnugget/iqama-times/releases/download/latest/iqama-times.apk`
 
 ## 2. Install it on the TV
 
@@ -47,6 +47,21 @@ highlight moves on promptly after each prayer.
 | Background image URL | Or use a picture from a link |
 | Remove background | Back to the green star pattern |
 | Refresh times now | Re-reads the mosque's page and shows what it found |
+
+## Phone widget (iqama-widget.apk)
+
+The same times as a home-screen widget for Android phones (Android 8 or newer).
+
+1. On your phone, open `https://github.com/Midgetmcnugget/iqama-times/releases/latest`
+   and tap **iqama-widget.apk**. Allow your browser to install apps when asked.
+2. Open **Iqama Times** once, set the mosque (and **Iqamah after adhan** if the mosque's page
+   only lists adhan times), then tap **Save and refresh times**.
+3. Long-press an empty spot on the home screen › **Widgets** › **Iqama Times**, and drag it on.
+   Tap the widget any time to get back to its settings.
+
+The widget highlights the next prayer in gold, fades the ones that have passed, redraws itself
+just after each prayer time, and re-reads the mosque's page every few hours. It can be resized;
+at one row high it shows just the prayer names and iqamah times.
 
 ## How it works
 

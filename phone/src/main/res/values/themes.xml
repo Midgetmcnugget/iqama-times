@@ -1,0 +1,19 @@
+<resources>
+    <style name="Theme.IqamaWidget" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">#0E6B5E</item>
+        <item name="colorSecondary">#E8C26A</item>
+    </style>
+
+    <style name="SettingsLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
+    </style>
+
+    <style name="SettingsHelp">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodySmall</item>
+    </style>
+</resources>

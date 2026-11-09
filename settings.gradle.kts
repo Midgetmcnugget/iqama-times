@@ -18,4 +18,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Projectivy Iqama Times"
 include(":iqama")
+include(":phone")
 include(":api")
