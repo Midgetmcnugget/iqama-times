@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Reads today's times from the mosque's public Masjidbox page. The page draws its timetable with
+ * Reads today's times from a mosque's public Masjidbox page. The page draws its timetable with
  * JavaScript, so it is loaded in an off-screen WebView and its visible text is parsed.
  * Same approach as the TV plugin.
  */
@@ -31,36 +31,44 @@ object Fetcher {
 
     fun today(): String = SimpleDateFormat("yyyy-MM-dd", Locale.UK).format(Date())
 
-    fun isStale(prefs: Prefs): Boolean =
-        prefs.fetchedDay != today() ||
-            System.currentTimeMillis() - prefs.fetchedAt > MAX_AGE_MS ||
-            PrayerTimes.fromJson(prefs.timesJson).isEmpty()
+    fun isStale(m: Prefs.Mosque): Boolean =
+        m.fetchedDay != today() ||
+            System.currentTimeMillis() - m.fetchedAt > MAX_AGE_MS ||
+            PrayerTimes.fromJson(m.timesJson).isEmpty()
 
-    /** Fetches on the main thread; [onDone] runs on the main thread with true if times were saved. */
-    fun fetch(context: Context, onDone: (Boolean) -> Unit) {
+    /** Fetches [slug]; [onDone] runs on the main thread with true if times were saved. */
+    fun fetch(context: Context, slug: String, onDone: (Boolean) -> Unit) {
         val app = context.applicationContext
+        val m = Prefs(app).mosque(slug)
         main.post {
             try {
-                load(app, Prefs(app), onDone)
+                load(app, m, onDone)
             } catch (e: Throwable) {
                 Log.e(TAG, "WebView unavailable", e)
-                Prefs(app).lastError = "WebView unavailable"
+                m.lastError = "WebView unavailable"
                 onDone(false)
             }
         }
     }
 
     /** Blocking version for background work. Never call on the main thread. */
-    fun fetchBlocking(context: Context): Boolean {
+    fun fetchBlocking(context: Context, slug: String): Boolean {
         val latch = CountDownLatch(1)
         var result = false
-        fetch(context) { ok -> result = ok; latch.countDown() }
+        fetch(context, slug) { ok -> result = ok; latch.countDown() }
         latch.await(TIMEOUT_MS + 20_000L, TimeUnit.MILLISECONDS)
         return result
     }
 
+    /** The mosque's name as shown on the page: the line after "Prayer times". */
+    private fun nameFromPage(text: String): String? {
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val i = lines.indexOfFirst { it.equals("Prayer times", ignoreCase = true) }
+        return lines.getOrNull(i + 1)?.takeIf { i >= 0 && it.length in 3..80 }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
-    private fun load(context: Context, prefs: Prefs, onDone: (Boolean) -> Unit) {
+    private fun load(context: Context, m: Prefs.Mosque, onDone: (Boolean) -> Unit) {
         val web = WebView(context)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
@@ -97,14 +105,15 @@ object Fetcher {
                 val text = decode(raw)
                 val prayers = PrayerTimes.parse(text)
                 if (PrayerTimes.isUsable(prayers)) {
-                    prefs.timesJson = PrayerTimes.toJson(prayers)
-                    prefs.pageSnippet = PrayerTimes.snippet(text)
-                    prefs.fetchedAt = System.currentTimeMillis()
-                    prefs.fetchedDay = today()
-                    prefs.lastError = ""
+                    m.timesJson = PrayerTimes.toJson(prayers)
+                    m.pageSnippet = PrayerTimes.snippet(text)
+                    nameFromPage(text)?.let { m.name = it }
+                    m.fetchedAt = System.currentTimeMillis()
+                    m.fetchedDay = today()
+                    m.lastError = ""
                     finish(true)
                 } else if (System.currentTimeMillis() - started > TIMEOUT_MS) {
-                    prefs.lastError = if (text.contains("404") || text.contains("not found", true))
+                    m.lastError = if (text.contains("404") || text.contains("not found", true))
                         "Mosque page not found" else "Times didn't appear on the page"
                     finish(false)
                 } else {
@@ -122,12 +131,12 @@ object Fetcher {
 
         main.postDelayed({
             if (!finished) {
-                prefs.lastError = "Masjidbox didn't respond"
+                m.lastError = "Masjidbox didn't respond"
                 finish(false)
             }
         }, TIMEOUT_MS + 10_000L)
 
-        web.loadUrl(prefs.mosqueUrl, mapOf("Accept-Language" to "en-GB,en;q=0.9"))
+        web.loadUrl(m.url, mapOf("Accept-Language" to "en-GB,en;q=0.9"))
     }
 
     private fun decode(raw: String?): String {

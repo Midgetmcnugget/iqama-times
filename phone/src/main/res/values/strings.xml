@@ -1,17 +1,21 @@
 <resources>
     <string name="app_name">Iqama Times</string>
     <string name="widget_name">Iqama Times</string>
-    <string name="widget_description">Your mosque\'s iqamah times from Masjidbox, with the next prayer highlighted</string>
+    <string name="widget_description">Your mosque\'s adhan and iqamah times from Masjidbox, with the next prayer highlighted</string>
 
+    <string name="heading_widget">Settings for this widget</string>
+    <string name="heading_default">Default settings (used by new widgets)</string>
     <string name="mosque_label">Masjidbox mosque</string>
-    <string name="mosque_hint">e.g. masjid-al-falah-coventry</string>
-    <string name="mosque_help">The part after masjidbox.com/prayer-times/ in the mosque\'s link, or paste the whole link.</string>
-    <string name="show_name">Show mosque name</string>
+    <string name="mosque_help">Pick a mosque you\'ve used, or type a new one: the part after masjidbox.com/prayer-times/ in its link, or paste the whole link.</string>
+    <string name="show_name">Show mosque name (on taller widgets)</string>
+    <string name="show_sunrise">Show sunrise (Shuruq)</string>
     <string name="clock_12h">12-hour clock</string>
-    <string name="iqamah_offset_label">Iqamah after adhan</string>
-    <string name="maghrib_offset_label">Maghrib iqamah</string>
+    <string name="iqamah_offset_label">Iqamah after adhan (this mosque)</string>
+    <string name="maghrib_offset_label">Maghrib iqamah (this mosque)</string>
     <string name="iqamah_offset_help">Only used when the mosque\'s web page lists adhan times but not iqamah (e.g. Chingford Mosque).</string>
     <string name="save_refresh">Save and refresh times</string>
-    <string name="refreshing">Fetching times from Masjidbox…</string>
-    <string name="add_widget_help">To add the widget: long-press an empty space on your home screen, tap Widgets, find Iqama Times and drag it onto the screen. Tap the widget any time to come back here.</string>
+    <string name="refreshing">Fetching times for %1$s…</string>
+    <string name="allow_exact">Allow exact timing</string>
+    <string name="allow_exact_help">Lets the highlight and countdown switch over exactly at each adhan and iqamah. Without it, Android may update the widget a few minutes late.</string>
+    <string name="add_widget_help">To add a widget: long-press an empty space on your home screen, tap Widgets, find Iqama Times and drag it on. Make it one row high for just the times, or two rows for the countdown banner. Tap a widget to change its mosque. You can add several widgets for different mosques.</string>
 </resources>

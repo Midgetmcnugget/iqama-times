@@ -19,8 +19,11 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
     override fun doWork(): Result {
         val prefs = Prefs(applicationContext)
         val force = inputData.getBoolean(KEY_FORCE, false)
-        if (force || Fetcher.isStale(prefs)) {
-            Fetcher.fetchBlocking(applicationContext)
+        // Refresh every mosque that's on a widget (one at a time).
+        for (slug in IqamaWidget.mosquesInUse(applicationContext)) {
+            if (force || Fetcher.isStale(prefs.mosque(slug))) {
+                Fetcher.fetchBlocking(applicationContext, slug)
+            }
         }
         IqamaWidget.updateAll(applicationContext)
         return Result.success()

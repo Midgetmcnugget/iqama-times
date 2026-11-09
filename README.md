@@ -54,14 +54,17 @@ The same times as a home-screen widget for Android phones (Android 8 or newer).
 
 1. On your phone, open `https://github.com/Midgetmcnugget/iqama-times/releases/latest`
    and tap **iqama-widget.apk**. Allow your browser to install apps when asked.
-2. Open **Iqama Times** once, set the mosque (and **Iqamah after adhan** if the mosque's page
-   only lists adhan times), then tap **Save and refresh times**.
-3. Long-press an empty spot on the home screen › **Widgets** › **Iqama Times**, and drag it on.
-   Tap the widget any time to get back to its settings.
+2. Long-press an empty spot on the home screen › **Widgets** › **Iqama Times**, and drag it on.
+3. Tap the widget to choose its mosque (pick a recent one or type a new one) and, for mosques
+   whose page only lists adhan times, set **Iqamah after adhan**.
 
-The widget highlights the next prayer in gold, fades the ones that have passed, redraws itself
-just after each prayer time, and re-reads the mosque's page every few hours. It can be resized;
-at one row high it shows just the prayer names and iqamah times.
+* **One row high (e.g. 5×1):** every prayer's name, adhan time (bold) and iqamah time; the
+  next prayer's iqamah is in a gold box.
+* **Two rows or taller:** a banner with the mosque, the next prayer and a live countdown to its
+  adhan or iqamah, above the same row.
+* Each widget can show a different mosque. Sunrise, the mosque name and the 12-hour clock can be
+  switched on or off. **Allow exact timing** (in settings) makes the highlight and countdown
+  switch over exactly at each adhan and iqamah.
 
 ## How it works
 
