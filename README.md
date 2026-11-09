@@ -42,7 +42,10 @@ highlight moves on promptly after each prayer.
 | Move panel down / Move panel up | Shifts the panel 20 px per click; the home screen updates straight away |
 | Reset position | Puts the panel back where it started (190 px from the top) |
 | Clock | 24-hour (default) or 12-hour |
-| Background image URL | Optional photo behind the times; blank = green star pattern |
+| Iqamah after adhan / Maghrib iqamah | For mosques whose Masjidbox page only lists adhan times (e.g. Chingford Mosque): shows iqamah this many minutes after adhan |
+| Choose background picture | Pick a picture with a file explorer app on the TV (e.g. X-plore), from the TV or a USB stick |
+| Background image URL | Or use a picture from a link |
+| Remove background | Back to the green star pattern |
 | Refresh times now | Re-reads the mosque's page and shows what it found |
 
 ## How it works

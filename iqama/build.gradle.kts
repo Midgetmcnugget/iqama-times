@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.leanback)
     implementation(libs.androidx.appcompat)
+    implementation("androidx.activity:activity:1.9.3")
     implementation(libs.google.material)
     implementation(project(":api"))
 }

@@ -133,6 +133,7 @@ object MasjidboxFetcher {
                 val prayers = PrayerTimes.parse(text)
                 if (PrayerTimes.isUsable(prayers)) {
                     Prefs.timesJson = PrayerTimes.toJson(prayers)
+                    Prefs.pageSnippet = PrayerTimes.snippet(text)
                     Prefs.fetchedAt = System.currentTimeMillis()
                     Prefs.fetchedDay = today()
                     Prefs.lastError = ""

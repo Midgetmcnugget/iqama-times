@@ -51,9 +51,15 @@ object WallpaperRenderer {
                 Column("JUMUAH1", "Jumu'ah", jumuah.athan, jumuah.iqamah)
             } else {
                 val p = byKey[key]
-                Column(key, PrayerTimes.label(key), p?.athan, p?.iqamah)
+                Column(key, PrayerTimes.label(key), p?.athan, p?.iqamah ?: estimatedIqamah(key, p?.athan))
             }
         }
+    }
+
+    /** Iqamah from the "iqamah after adhan" setting, for pages that only list adhan times. */
+    private fun estimatedIqamah(key: String, athan: Int?): Int? {
+        if (athan == null || Prefs.iqamahOffset < 0) return null
+        return athan + if (key == "MAGHRIB") Prefs.maghribOffset else Prefs.iqamahOffset
     }
 
     fun render(context: Context, now: Calendar): Bitmap {
@@ -132,7 +138,8 @@ object WallpaperRenderer {
                 paint(withAlpha(WHITE, fade), 80f, regular, Paint.Align.CENTER))
             val small = when {
                 col.iqamah != null && col.athan != null -> "Adhan " + PrayerTimes.format(col.athan, twelve)
-                col.iqamah == null && col.athan != null -> "Start time"
+                // Only the adhan is known (the mosque page doesn't list iqamah).
+                col.iqamah == null && col.athan != null -> "Adhan"
                 else -> ""
             }
             c.drawText(small, cx, card.top + 178f, paint(withAlpha(MUTED, fade), 26f, regular, Paint.Align.CENTER))

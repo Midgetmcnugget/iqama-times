@@ -19,6 +19,24 @@
     <string name="setting_position_reset_title">Reset position</string>
     <string name="setting_position_reset_desc">Put the panel back at %1$d px from the top</string>
     <string name="setting_clock_title">Clock</string>
+    <string name="setting_iqamah_offset_title">Iqamah after adhan</string>
+    <string name="setting_iqamah_offset_off_desc">Off. Use this if your mosque\'s page only lists adhan times</string>
+    <string name="setting_iqamah_offset_on_desc">%1$d min after adhan, when the mosque page doesn\'t list iqamah</string>
+    <string name="setting_maghrib_offset_title">Maghrib iqamah</string>
+    <string name="iqamah_offset_off">Off (show adhan only)</string>
+    <string name="iqamah_same_as_adhan">Same time as adhan</string>
+    <string name="iqamah_minutes_after">%1$d minutes after adhan</string>
+
+    <string name="setting_background_file_title">Choose background picture</string>
+    <string name="setting_background_file_desc">Pick a picture with a file explorer app (on the TV or a USB stick)</string>
+    <string name="background_using_file">Using %1$s. Click to choose another</string>
+    <string name="background_pick_with">Choose a picture with</string>
+    <string name="background_no_explorer">No file explorer found. Install one such as X-plore from Google Play, then try again</string>
+    <string name="background_copying">Copying picture…</string>
+    <string name="background_import_failed">Couldn\'t use that picture: %1$s</string>
+    <string name="background_permission_denied">the TV didn\'t allow access to that file</string>
+    <string name="setting_background_clear_title">Remove background</string>
+    <string name="setting_background_clear_desc">Go back to the green pattern</string>
     <string name="setting_background_title">Background image URL</string>
     <string name="setting_background_empty">None (pattern background). Click to paste an image link.</string>
     <string name="setting_refresh_title">Refresh times now</string>
