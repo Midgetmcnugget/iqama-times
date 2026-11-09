@@ -1,43 +1,49 @@
-name: Build APK
 
+name: Build APK
+ 
 # Builds the plugin on GitHub's servers and publishes it at a fixed link:
 #   https://github.com/<you>/<repo>/releases/download/latest/iqama-times.apk
 # Runs on every change to the code, or by hand from the Actions tab ("Run workflow").
-
+ 
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
-
+ 
 permissions:
   contents: write
-
+ 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+ 
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
-
-      - uses: android-actions/setup-android@v3
-
-      - uses: gradle/actions/setup-gradle@v4
-
+ 
+      # GitHub's machines already have the Android SDK; just accept its licences
+      # so the build can download the Android version it needs.
+      - name: Accept Android SDK licences
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+ 
+      - uses: gradle/actions/setup-gradle@v5
+ 
       - name: Build
         run: |
           chmod +x gradlew
           ./gradlew :iqama:assembleDebug --stacktrace
           cp iqama/build/outputs/apk/debug/*.apk iqama-times.apk
-
-      - uses: actions/upload-artifact@v4
+ 
+      - uses: actions/upload-artifact@v5
         with:
           name: iqama-times
           path: iqama-times.apk
-
+ 
       - name: Publish to the "latest" release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,4 +52,3 @@ jobs:
           gh release create latest iqama-times.apk \
             --title "Iqama Times – latest build" \
             --notes "Built from ${GITHUB_SHA::7}. On the TV, open Downloader and enter the iqama-times.apk link from this page."
-
