@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Toolbar + scrolling settings. The root is padded for the status/navigation bars and the
+     keyboard in code, so nothing sits underneath them. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical">
+
+  <com.google.android.material.appbar.MaterialToolbar
+      android:id="@+id/toolbar"
+      android:layout_width="match_parent"
+      android:layout_height="?attr/actionBarSize"
+      android:title="@string/app_name" />
+
+  <ScrollView
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
     android:fillViewport="true">
 
     <LinearLayout
@@ -58,6 +74,45 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:text="@string/clock_12h" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:layout_marginTop="20dp"
+            android:text="@string/appearance_label" />
+
+        <TextView
+            style="@style/SettingsHelp"
+            android:text="@string/appearance_help" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/swatches"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/colour_name"
+            style="@style/SettingsHelp" />
+
+        <TextView
+            android:id="@+id/opacity_label"
+            style="@style/SettingsLabel"
+            android:layout_marginTop="12dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/opacity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="5"
+            android:valueFrom="0"
+            android:valueTo="100" />
 
         <TextView
             style="@style/SettingsLabel"
@@ -119,3 +174,4 @@
             android:text="@string/add_widget_help" />
     </LinearLayout>
 </ScrollView>
+</LinearLayout>

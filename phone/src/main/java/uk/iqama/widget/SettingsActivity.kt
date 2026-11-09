@@ -13,8 +13,17 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
+import android.graphics.drawable.GradientDrawable
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import java.util.Calendar
 
@@ -39,9 +48,21 @@ class SettingsActivity : AppCompatActivity() {
     private var bindingSpinners = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        DynamicColors.applyToActivityIfAvailable(this)  // use the phone's own colours
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         prefs = Prefs(this)
+
+        // Draw edge to edge and pad for the status bar, navigation bar and keyboard ourselves,
+        // so the top of the settings is never hidden under the bar.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val root = findViewById<View>(R.id.settings_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            v.setPadding(b.left, b.top, b.right, b.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+        findViewById<MaterialToolbar>(R.id.toolbar).title = getString(R.string.app_name)
 
         widgetId = intent?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
@@ -86,6 +107,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         bindOffsets()
 
+        bindAppearance()
+
         findViewById<Button>(R.id.save).setOnClickListener { saveAndRefresh() }
         findViewById<Button>(R.id.exact).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
@@ -108,6 +131,61 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun forWidget() = widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /** Colour swatches and the transparency slider; changes show on the widget straight away. */
+    private fun bindAppearance() {
+        val row = findViewById<LinearLayout>(R.id.swatches)
+        val colourName = findViewById<TextView>(R.id.colour_name)
+        val dp = resources.displayMetrics.density
+        val choices = buildList {
+            if (Build.VERSION.SDK_INT >= 31) add(Appearance.THEME to "Phone theme")
+            Appearance.SWATCHES.forEach { add(it.id to it.label) }
+        }
+        val circles = mutableListOf<View>()
+
+        fun paint() {
+            choices.forEachIndexed { i, (id, _) ->
+                val selected = id == prefs.background
+                (circles[i].background as GradientDrawable).setStroke(
+                    ((if (selected) 3 else 1) * dp).toInt(),
+                    if (selected) MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, 0xFF3F7F74.toInt())
+                    else 0x55888888
+                )
+            }
+            colourName.text = choices.firstOrNull { it.first == prefs.background }?.second ?: ""
+        }
+
+        choices.forEach { (id, label) ->
+            val circle = View(this).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Appearance.colorFor(this@SettingsActivity, id))
+                }
+                contentDescription = label
+                layoutParams = LinearLayout.LayoutParams((40 * dp).toInt(), (40 * dp).toInt()).apply {
+                    marginEnd = (10 * dp).toInt()
+                }
+                setOnClickListener {
+                    prefs.background = id
+                    paint()
+                    changed()
+                }
+            }
+            circles.add(circle)
+            row.addView(circle)
+        }
+        paint()
+
+        val label = findViewById<TextView>(R.id.opacity_label)
+        val slider = findViewById<Slider>(R.id.opacity)
+        slider.value = (prefs.opacity / 5 * 5).toFloat()
+        label.text = getString(R.string.opacity_label, 100 - prefs.opacity)
+        slider.addOnChangeListener { _, value, _ ->
+            prefs.opacity = value.toInt()
+            label.text = getString(R.string.opacity_label, 100 - prefs.opacity)
+            IqamaWidget.updateAll(this)
+        }
+    }
 
     private fun bindSwitch(id: Int, value: Boolean, set: (Boolean) -> Unit) {
         val s = findViewById<MaterialSwitch>(id)

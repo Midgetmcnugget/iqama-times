@@ -1,8 +1,6 @@
 <resources>
-    <style name="Theme.IqamaWidget" parent="Theme.Material3.DayNight">
-        <item name="colorPrimary">#0E6B5E</item>
-        <item name="colorSecondary">#E8C26A</item>
-    </style>
+    <!-- Uses the phone's own colours (Material You) where available -->
+    <style name="Theme.IqamaWidget" parent="Theme.Material3.DayNight.NoActionBar" />
 
     <style name="SettingsLabel">
         <item name="android:layout_width">match_parent</item>

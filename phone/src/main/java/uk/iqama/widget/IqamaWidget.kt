@@ -76,10 +76,6 @@ class IqamaWidget : AppWidgetProvider() {
         /** At or above this height (dp) the banner layout is used. */
         private const val FULL_LAYOUT_MIN_HEIGHT = 130
 
-        private val WHITE = Color.WHITE
-        private val MUTED = Color.argb(0xB3, 0xFF, 0xFF, 0xFF)
-        private val FADED = Color.argb(0x80, 0xFF, 0xFF, 0xFF)
-        private val FADED_MUTED = Color.argb(0x5A, 0xFF, 0xFF, 0xFF)
         private val CHIP_TEXT = Color.rgb(0x14, 0x23, 0x2B)
 
         private val ORDER = listOf("FAJR", "SHURUQ", "DHUHR", "ASR", "MAGHRIB", "ISHA")
@@ -172,6 +168,21 @@ class IqamaWidget : AppWidgetProvider() {
             val v = RemoteViews(context.packageName, if (full) R.layout.widget_full else R.layout.widget_compact)
             val twelve = prefs.clock12h
 
+            // Flat background in the chosen colour and transparency; text colours to match.
+            val bgColor = Appearance.colorFor(context, prefs.background)
+            val pal = Appearance.paletteFor(bgColor, prefs.opacity)
+            v.setInt(R.id.bg, "setColorFilter", bgColor or 0xFF000000.toInt())
+            v.setFloat(R.id.bg, "setAlpha", prefs.opacity / 100f)
+            v.setTextColor(R.id.message, pal.muted)
+            if (full) {
+                v.setInt(R.id.banner, "setBackgroundResource",
+                    if (pal.lightBackground) R.drawable.banner_bg_dark else R.drawable.banner_bg)
+                v.setTextColor(R.id.mosque_name, pal.text)
+                v.setTextColor(R.id.next_name, pal.text)
+                v.setTextColor(R.id.countdown_label, pal.muted)
+                v.setTextColor(R.id.countdown, pal.text)
+            }
+
             // Tapping opens this widget's settings (mosque etc.).
             val open = Intent(context, SettingsActivity::class.java)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
@@ -215,14 +226,14 @@ class IqamaWidget : AppWidgetProvider() {
                 val passed = !isNext && (col.endTime?.let { it <= nowMin } == true)
 
                 v.setTextViewText(NAMES[i], col.label)
-                v.setTextColor(NAMES[i], when { isNext -> WHITE; passed -> FADED_MUTED; else -> MUTED })
+                v.setTextColor(NAMES[i], when { isNext -> pal.text; passed -> pal.fadedMuted; else -> pal.muted })
 
                 v.setTextViewText(ADHANS[i], col.athan?.let { PrayerTimes.format(it, twelve) } ?: "--:--")
-                v.setTextColor(ADHANS[i], if (passed) FADED else WHITE)
+                v.setTextColor(ADHANS[i], if (passed) pal.faded else pal.text)
 
                 v.setTextViewText(IQAMAHS[i], col.iqamah?.let { PrayerTimes.format(it, twelve) } ?: "--")
                 v.setInt(IQAMAHS[i], "setBackgroundResource", if (isNext) R.drawable.iqamah_chip_next else 0)
-                v.setTextColor(IQAMAHS[i], when { isNext -> CHIP_TEXT; passed -> FADED_MUTED; else -> MUTED })
+                v.setTextColor(IQAMAHS[i], when { isNext -> CHIP_TEXT; passed -> pal.fadedMuted; else -> pal.muted })
             }
 
             if (full) bindBanner(v, cols, next, nowMin)

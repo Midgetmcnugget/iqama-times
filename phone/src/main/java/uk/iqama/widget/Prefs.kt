@@ -32,6 +32,16 @@ class Prefs(context: Context) {
         get() = p.getBoolean("show_name", true)
         set(v) = p.edit().putBoolean("show_name", v).apply()
 
+    /** Background colour: a swatch id from [Appearance.SWATCHES], or "theme". */
+    var background: String
+        get() = p.getString("background", "teal") ?: "teal"
+        set(v) = p.edit().putString("background", v).apply()
+
+    /** How solid the background is, 0 (clear) to 100 (solid). */
+    var opacity: Int
+        get() = p.getInt("opacity", 85)
+        set(v) = p.edit().putInt("opacity", v.coerceIn(0, 100)).apply()
+
     /** Mosques used before, most recent first, for the picker. */
     var recentMosques: List<String>
         get() {

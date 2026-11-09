@@ -10,6 +10,9 @@
     <string name="show_name">Show mosque name (on taller widgets)</string>
     <string name="show_sunrise">Show sunrise (Shuruq)</string>
     <string name="clock_12h">12-hour clock</string>
+    <string name="appearance_label">Background (all widgets)</string>
+    <string name="appearance_help">Pick a colour. \"Phone theme\" follows your wallpaper colours.</string>
+    <string name="opacity_label">Transparency: %1$d%% see-through</string>
     <string name="iqamah_offset_label">Iqamah after adhan (this mosque)</string>
     <string name="maghrib_offset_label">Maghrib iqamah (this mosque)</string>
     <string name="iqamah_offset_help">Only used when the mosque\'s web page lists adhan times but not iqamah (e.g. Chingford Mosque).</string>
