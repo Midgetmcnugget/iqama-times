@@ -1,0 +1,56 @@
+# Iqama Times – a Projectivy Launcher wallpaper plugin
+
+Shows your mosque's iqamah times (from its public Masjidbox page) across the top of the
+Projectivy home screen. The next iqamah is highlighted in gold, prayers that have passed fade
+out, and on Fridays the Dhuhr slot shows Jumu'ah. Times refresh by themselves a few times a day.
+
+Default mosque: **Masjid Al Falah Coventry** (`masjid-al-falah-coventry`).
+
+## 1. Build it (no Android Studio needed)
+
+1. Sign in to <https://github.com> (a free account is fine) and click **New repository**.
+   Call it `iqama-times`, make it **Public**, and create it.
+2. On the new repo's page click **uploading an existing file**, then drag in **everything
+   inside** this folder (including the hidden `.github` folder – on Windows, tick
+   *View › Hidden items* in File Explorer first). Click **Commit changes**.
+3. Open the **Actions** tab. A "Build APK" run starts on its own and takes about 5 minutes.
+   When it's green, your APK is at:
+
+   `https://github.com/<your-username>/iqama-times/releases/download/latest/iqama-times.apk`
+
+## 2. Install it on the TV
+
+1. On the TV, install **Downloader** (by AFTVnews) from Google Play.
+2. Open Downloader, type the link above, and install when asked. (The first time, Android asks
+   you to allow Downloader to install apps – allow it.)
+
+## 3. Turn it on in Projectivy
+
+Projectivy › Settings › Appearance › Wallpaper › Launcher wallpaper › **🔌 Iqama Times**.
+
+Set the wallpaper update interval to the shortest option, so the gold "next iqamah"
+highlight moves on promptly after each prayer.
+
+## Settings (open the plugin's settings from the same Projectivy screen, or the Iqama Times app)
+
+| Setting | What it does |
+| --- | --- |
+| Masjidbox mosque | The part after `masjidbox.com/prayer-times/` in the mosque's link, or the whole link |
+| Position on screen | Top (default) or bottom |
+| Clock | 24-hour (default) or 12-hour |
+| Background image URL | Optional photo behind the times; blank = green star pattern |
+| Refresh times now | Re-reads the mosque's page and shows what it found |
+
+## How it works
+
+* `MasjidboxFetcher` opens the mosque's Masjidbox page in an off-screen WebView – the same page
+  you'd see in a browser – and reads the times off it. It refreshes when the stored times are
+  for another day or more than 6 hours old.
+* `WallpaperRenderer` draws a 1920×1080 image; `WallpaperImageProvider` hands it to Projectivy.
+* Projectivy asks for a new image every minute (`itemsCacheDurationMillis`), so the highlight
+  stays current.
+
+If Masjidbox changes how its page is laid out, the times may stop appearing – the plugin then
+keeps showing the last times it read, marked "times from <date>".
+
+Based on Projectivy's official sample: <https://github.com/spocky/projectivy-plugin-wallpaper-provider>

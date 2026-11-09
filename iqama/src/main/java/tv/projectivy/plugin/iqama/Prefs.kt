@@ -1,0 +1,94 @@
+package tv.projectivy.plugin.iqama
+
+import android.content.Context
+import android.content.SharedPreferences
+import org.json.JSONObject
+
+/** Plugin settings and the last times read from Masjidbox, stored in SharedPreferences. */
+object Prefs {
+    const val DEFAULT_MOSQUE = "masjid-al-falah-coventry"
+
+    private const val FILE = "iqama_prefs"
+    private const val KEY_MOSQUE = "mosque"
+    private const val KEY_POSITION_BOTTOM = "position_bottom"
+    private const val KEY_CLOCK_12H = "clock_12h"
+    private const val KEY_BACKGROUND_URL = "background_url"
+    private const val KEY_TIMES_JSON = "times_json"
+    private const val KEY_FETCHED_AT = "fetched_at"
+    private const val KEY_FETCHED_DAY = "fetched_day"
+    private const val KEY_LAST_ERROR = "last_error"
+
+    @Volatile
+    private var prefs: SharedPreferences? = null
+
+    fun init(context: Context) {
+        if (prefs == null) {
+            prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        }
+    }
+
+    private val p: SharedPreferences
+        get() = prefs ?: error("Prefs.init() not called")
+
+    /** Masjidbox slug (e.g. "masjid-al-falah-coventry") or a full masjidbox.com link. */
+    var mosque: String
+        get() = p.getString(KEY_MOSQUE, DEFAULT_MOSQUE)?.takeIf { it.isNotBlank() } ?: DEFAULT_MOSQUE
+        set(value) = p.edit().putString(KEY_MOSQUE, value.trim()).apply()
+
+    var positionBottom: Boolean
+        get() = p.getBoolean(KEY_POSITION_BOTTOM, false)
+        set(value) = p.edit().putBoolean(KEY_POSITION_BOTTOM, value).apply()
+
+    var clock12h: Boolean
+        get() = p.getBoolean(KEY_CLOCK_12H, false)
+        set(value) = p.edit().putBoolean(KEY_CLOCK_12H, value).apply()
+
+    var backgroundUrl: String
+        get() = p.getString(KEY_BACKGROUND_URL, "") ?: ""
+        set(value) = p.edit().putString(KEY_BACKGROUND_URL, value.trim()).apply()
+
+    var timesJson: String
+        get() = p.getString(KEY_TIMES_JSON, "") ?: ""
+        set(value) = p.edit().putString(KEY_TIMES_JSON, value).apply()
+
+    var fetchedAt: Long
+        get() = p.getLong(KEY_FETCHED_AT, 0L)
+        set(value) = p.edit().putLong(KEY_FETCHED_AT, value).apply()
+
+    /** Day (yyyy-MM-dd) the stored times are for. */
+    var fetchedDay: String
+        get() = p.getString(KEY_FETCHED_DAY, "") ?: ""
+        set(value) = p.edit().putString(KEY_FETCHED_DAY, value).apply()
+
+    var lastError: String
+        get() = p.getString(KEY_LAST_ERROR, "") ?: ""
+        set(value) = p.edit().putString(KEY_LAST_ERROR, value).apply()
+
+    /** Full page address for the configured mosque. */
+    val mosqueUrl: String
+        get() {
+            val m = mosque
+            return if (m.startsWith("http://") || m.startsWith("https://")) m
+            else "https://masjidbox.com/prayer-times/" + m.trim('/').substringAfterLast('/')
+        }
+
+    // Projectivy can back up and restore plugin settings through these two.
+    fun export(): String = JSONObject().apply {
+        put(KEY_MOSQUE, mosque)
+        put(KEY_POSITION_BOTTOM, positionBottom)
+        put(KEY_CLOCK_12H, clock12h)
+        put(KEY_BACKGROUND_URL, backgroundUrl)
+    }.toString()
+
+    fun import(json: String) {
+        try {
+            val o = JSONObject(json)
+            if (o.has(KEY_MOSQUE)) mosque = o.getString(KEY_MOSQUE)
+            if (o.has(KEY_POSITION_BOTTOM)) positionBottom = o.getBoolean(KEY_POSITION_BOTTOM)
+            if (o.has(KEY_CLOCK_12H)) clock12h = o.getBoolean(KEY_CLOCK_12H)
+            if (o.has(KEY_BACKGROUND_URL)) backgroundUrl = o.getString(KEY_BACKGROUND_URL)
+        } catch (_: Exception) {
+            // Ignore malformed backups; keep current settings.
+        }
+    }
+}

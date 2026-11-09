@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 16:9 TV banner: crescent and star with five "time" bars -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="160"
+    android:viewportHeight="90">
+    <path
+        android:fillColor="#0E3B36"
+        android:pathData="M0,0h160v90h-160z" />
+    <path
+        android:fillColor="#E8C26A"
+        android:pathData="M40,23a22,22 0,1 0,0.01 0z" />
+    <path
+        android:fillColor="#0E3B36"
+        android:pathData="M48,20a19.5,19.5 0,1 0,0.01 0z" />
+    <path
+        android:fillColor="#E8C26A"
+        android:pathData="M56,36l1.9,4.4l4.8,0.4l-3.6,3.1l1.1,4.7l-4.2,-2.5l-4.2,2.5l1.1,-4.7l-3.6,-3.1l4.8,-0.4z" />
+    <!-- five rows like a prayer timetable -->
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.9" android:pathData="M78,24h52v5h-52z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.9" android:pathData="M78,33h44v5h-44z" />
+    <path android:fillColor="#E8C26A" android:pathData="M78,42h56v6h-56z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.9" android:pathData="M78,52h48v5h-48z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.9" android:pathData="M78,61h40v5h-40z" />
+</vector>

@@ -1,0 +1,17 @@
+<resources>
+    <string name="plugin_name">Iqama Times</string>
+    <string name="plugin_description">Shows your mosque\'s iqamah times from Masjidbox on the Projectivy home screen. The next iqamah is highlighted and times refresh automatically.</string>
+    <string name="plugin_uuid">62554466-7793-45bc-a97c-0a132e73bccf</string>
+
+    <string name="projectivy_not_installed">This plugin needs Projectivy Launcher, which doesn\'t seem to be installed.</string>
+
+    <string name="settings">Settings</string>
+    <string name="setting_mosque_title">Masjidbox mosque</string>
+    <string name="setting_position_title">Position on screen</string>
+    <string name="setting_clock_title">Clock</string>
+    <string name="setting_background_title">Background image URL</string>
+    <string name="setting_background_empty">None (pattern background). Click to paste an image link.</string>
+    <string name="setting_refresh_title">Refresh times now</string>
+    <string name="refreshing">Fetching times from Masjidbox…</string>
+    <string name="refresh_failed">Couldn\'t read times. Check the mosque name and the TV\'s internet connection.</string>
+</resources>

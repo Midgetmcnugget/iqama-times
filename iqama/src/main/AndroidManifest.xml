@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+
+    <queries>
+        <package android:name="com.spocky.projengmenu" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/plugin_name"
+        android:supportsRtl="true"
+        android:icon="@drawable/ic_launcher"
+        android:banner="@drawable/ic_banner"
+        android:usesCleartextTraffic="false"
+        android:theme="@style/Theme.ProjectivyWallpaperProvider">
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".WallpaperProviderService"
+            android:exported="true"
+            android:label="@string/plugin_name"
+            android:icon="@drawable/ic_launcher"
+            android:banner="@drawable/ic_banner"
+            tools:ignore="ExportedService">
+
+            <!-- Mandatory for Projectivy to detect the plugin -->
+            <intent-filter>
+                <action android:name="tv.projectivy.plugin.WALLPAPER_PROVIDER" />
+            </intent-filter>
+
+            <meta-data android:name="apiVersion" android:value="1" />
+            <meta-data android:name="uuid" android:value="@string/plugin_uuid" />
+            <meta-data android:name="name" android:value="@string/plugin_name" />
+            <meta-data android:name="settingsActivity" android:value=".SettingsActivity" />
+            <!-- Ask Projectivy for a fresh image every minute so the "next iqamah" highlight moves on -->
+            <meta-data android:name="itemsCacheDurationMillis" android:value="@integer/items_cache_duration_millis" />
+            <!-- 1 = TIME_ELAPSED only -->
+            <meta-data android:name="updateMode" android:value="1" />
+        </service>
+
+        <!-- Serves the rendered wallpaper images to Projectivy (read-only) -->
+        <provider
+            android:name=".WallpaperImageProvider"
+            android:authorities="tv.projectivy.plugin.iqama.images"
+            android:exported="true"
+            tools:ignore="ExportedContentProvider" />
+
+    </application>
+
+</manifest>
