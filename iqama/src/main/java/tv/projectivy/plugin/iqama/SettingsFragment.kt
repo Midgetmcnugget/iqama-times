@@ -1,6 +1,8 @@
 package tv.projectivy.plugin.iqama
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.leanback.app.GuidedStepSupportFragment
 import androidx.leanback.widget.GuidanceStylist.Guidance
@@ -31,9 +33,47 @@ class SettingsFragment : GuidedStepSupportFragment() {
         )
         actions.add(
             GuidedAction.Builder(ctx)
-                .id(ID_POSITION)
-                .title(R.string.setting_position_title)
+                .id(ID_SHOW_NAME)
+                .title(R.string.setting_show_name_title)
+                .description(showNameText())
+                .build()
+        )
+        actions.add(
+            GuidedAction.Builder(ctx)
+                .id(ID_FONT)
+                .title(R.string.setting_font_title)
+                .description(fontText())
+                .subActions(fontChoices())
+                .build()
+        )
+        actions.add(
+            GuidedAction.Builder(ctx)
+                .id(ID_FONT_NAME)
+                .title(R.string.setting_font_name_title)
+                .description(getString(R.string.setting_font_name_desc))
+                .editDescription(Prefs.fontName)
+                .descriptionEditable(true)
+                .build()
+        )
+        actions.add(
+            GuidedAction.Builder(ctx)
+                .id(ID_MOVE_DOWN)
+                .title(R.string.setting_move_down_title)
                 .description(positionText())
+                .build()
+        )
+        actions.add(
+            GuidedAction.Builder(ctx)
+                .id(ID_MOVE_UP)
+                .title(R.string.setting_move_up_title)
+                .description(positionText())
+                .build()
+        )
+        actions.add(
+            GuidedAction.Builder(ctx)
+                .id(ID_POSITION_RESET)
+                .title(R.string.setting_position_reset_title)
+                .description(getString(R.string.setting_position_reset_desc, Prefs.PANEL_TOP_DEFAULT))
                 .build()
         )
         actions.add(
@@ -73,11 +113,20 @@ class SettingsFragment : GuidedStepSupportFragment() {
                 }
                 setDescription(ID_MOSQUE, Prefs.mosque)
             }
-            ID_POSITION -> {
-                Prefs.positionBottom = !Prefs.positionBottom
-                setDescription(ID_POSITION, positionText())
-                WallpaperProviderService.notifyProjectivy(requireContext(), prefsChanged = true)
+            ID_SHOW_NAME -> {
+                Prefs.showMosqueName = !Prefs.showMosqueName
+                setDescription(ID_SHOW_NAME, showNameText())
+                // The panel changes height, so refresh the position text too.
+                movePanel(Prefs.panelTop)
             }
+            ID_FONT_NAME -> {
+                val value = action.editDescription?.toString()?.trim().orEmpty()
+                if (value != Prefs.fontName) applyFont(value)
+                else setDescription(ID_FONT_NAME, getString(R.string.setting_font_name_desc))
+            }
+            ID_MOVE_DOWN -> movePanel(Prefs.panelTop + Prefs.PANEL_STEP)
+            ID_MOVE_UP -> movePanel(Prefs.panelTop - Prefs.PANEL_STEP)
+            ID_POSITION_RESET -> movePanel(Prefs.PANEL_TOP_DEFAULT)
             ID_CLOCK -> {
                 Prefs.clock12h = !Prefs.clock12h
                 setDescription(ID_CLOCK, clockText())
@@ -99,6 +148,54 @@ class SettingsFragment : GuidedStepSupportFragment() {
         }
     }
 
+    override fun onSubGuidedActionClicked(action: GuidedAction): Boolean {
+        val i = (action.id - ID_FONT_CHOICE_BASE).toInt()
+        if (i == 0) applyFont("")
+        else if (i in 1..Fonts.CHOICES.size) applyFont(Fonts.CHOICES[i - 1])
+        return true  // close the list
+    }
+
+    private fun fontChoices(): List<GuidedAction> {
+        val ctx = requireContext()
+        val names = listOf(getString(R.string.font_default)) + Fonts.CHOICES
+        return names.mapIndexed { i, name ->
+            GuidedAction.Builder(ctx)
+                .id(ID_FONT_CHOICE_BASE + i)
+                .title(name)
+                .build()
+        }
+    }
+
+    /**
+     * Downloads the font first, and only switches to it if it worked, so a typo never leaves
+     * the wallpaper without a font.
+     */
+    private fun applyFont(name: String) {
+        val app = requireContext().applicationContext
+        if (name.isBlank()) {
+            Prefs.fontName = ""
+            setDescription(ID_FONT, fontText())
+            WallpaperProviderService.notifyProjectivy(app, prefsChanged = true)
+            return
+        }
+        setDescription(ID_FONT, getString(R.string.font_downloading, name))
+        val main = Handler(Looper.getMainLooper())
+        Thread {
+            val ok = Fonts.prepare(app, name)
+            main.post {
+                if (ok) {
+                    Prefs.fontName = name
+                    WallpaperProviderService.notifyProjectivy(app, prefsChanged = true)
+                }
+                if (isAdded) {
+                    setDescription(ID_FONT, if (ok) fontText() else getString(R.string.font_failed, name, fontText()))
+                    findActionById(ID_FONT_NAME)?.editDescription = Prefs.fontName
+                    setDescription(ID_FONT_NAME, getString(R.string.setting_font_name_desc))
+                }
+            }
+        }.start()
+    }
+
     private fun refreshNow() {
         setDescription(ID_REFRESH, getString(R.string.refreshing))
         val app = requireContext().applicationContext
@@ -118,7 +215,26 @@ class SettingsFragment : GuidedStepSupportFragment() {
         notifyActionChanged(findActionPositionById(id))
     }
 
-    private fun positionText() = if (Prefs.positionBottom) "Bottom of the screen" else "Top of the screen"
+    /** Moves the panel and asks Projectivy to redraw, so the change shows straight away. */
+    private fun movePanel(newTop: Int) {
+        Prefs.panelTop = newTop
+        val text = positionText()
+        setDescription(ID_MOVE_DOWN, text)
+        setDescription(ID_MOVE_UP, text)
+        WallpaperProviderService.notifyProjectivy(requireContext(), prefsChanged = true)
+    }
+
+    private fun positionText(): String {
+        val top = Prefs.panelTop
+        val where = when (top) {
+            Prefs.PANEL_TOP_MIN -> " (as high as it goes)"
+            Prefs.panelTopMax -> " (as low as it goes)"
+            else -> ""
+        }
+        return "Now $top px from the top$where. Each click moves it ${Prefs.PANEL_STEP} px."
+    }
+    private fun showNameText() = if (Prefs.showMosqueName) "Shown above the times" else "Hidden – the panel shrinks to fit"
+    private fun fontText() = if (Prefs.fontName.isBlank()) getString(R.string.font_default) else "Using ${Prefs.fontName}"
     private fun clockText() = if (Prefs.clock12h) "12-hour (1:30)" else "24-hour (13:30)"
     private fun backgroundText() = Prefs.backgroundUrl.ifBlank { getString(R.string.setting_background_empty) }
 
@@ -142,9 +258,15 @@ class SettingsFragment : GuidedStepSupportFragment() {
 
     companion object {
         private const val ID_MOSQUE = 1L
-        private const val ID_POSITION = 2L
+        private const val ID_MOVE_DOWN = 2L
+        private const val ID_MOVE_UP = 6L
+        private const val ID_POSITION_RESET = 7L
         private const val ID_CLOCK = 3L
         private const val ID_BACKGROUND = 4L
         private const val ID_REFRESH = 5L
+        private const val ID_SHOW_NAME = 8L
+        private const val ID_FONT = 9L
+        private const val ID_FONT_NAME = 10L
+        private const val ID_FONT_CHOICE_BASE = 100L
     }
 }

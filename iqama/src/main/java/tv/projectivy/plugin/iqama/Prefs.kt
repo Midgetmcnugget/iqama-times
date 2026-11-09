@@ -11,6 +11,9 @@ object Prefs {
     private const val FILE = "iqama_prefs"
     private const val KEY_MOSQUE = "mosque"
     private const val KEY_POSITION_BOTTOM = "position_bottom"
+    private const val KEY_PANEL_TOP = "panel_top"
+    private const val KEY_SHOW_NAME = "show_mosque_name"
+    private const val KEY_FONT = "font_name"
     private const val KEY_CLOCK_12H = "clock_12h"
     private const val KEY_BACKGROUND_URL = "background_url"
     private const val KEY_TIMES_JSON = "times_json"
@@ -35,9 +38,51 @@ object Prefs {
         get() = p.getString(KEY_MOSQUE, DEFAULT_MOSQUE)?.takeIf { it.isNotBlank() } ?: DEFAULT_MOSQUE
         set(value) = p.edit().putString(KEY_MOSQUE, value.trim()).apply()
 
-    var positionBottom: Boolean
-        get() = p.getBoolean(KEY_POSITION_BOTTOM, false)
-        set(value) = p.edit().putBoolean(KEY_POSITION_BOTTOM, value).apply()
+    // ---- Panel layout (all in pixels on a 1920x1080 frame) ----
+    /** Height of the row of prayer tiles. */
+    const val CARD_HEIGHT = 190
+    /** Space above and below the tiles inside the panel. */
+    const val PANEL_PADDING = 32
+    /** Extra height the mosque-name header adds when it is shown. */
+    const val HEADER_HEIGHT = 76
+    const val PANEL_TOP_DEFAULT = 190
+    const val PANEL_TOP_MIN = 20
+    const val PANEL_STEP = 20
+
+    /** Panel height: it shrinks to fit when the mosque name is hidden. */
+    val panelHeight: Int
+        get() = PANEL_PADDING * 2 + CARD_HEIGHT + if (showMosqueName) HEADER_HEIGHT else 0
+
+    /** Lowest the panel can go while staying fully on screen. */
+    val panelTopMax: Int
+        get() = 1080 - panelHeight - 20
+
+    // Vertical position of the panel: distance of its top edge from the top of the screen.
+    var panelTop: Int
+        get() {
+            if (!p.contains(KEY_PANEL_TOP) && p.getBoolean(KEY_POSITION_BOTTOM, false)) {
+                // Carry over the old "bottom of the screen" setting.
+                return 1080 - 90 - panelHeight
+            }
+            return p.getInt(KEY_PANEL_TOP, PANEL_TOP_DEFAULT).coerceIn(PANEL_TOP_MIN, panelTopMax)
+        }
+        set(value) = p.edit()
+            .putInt(KEY_PANEL_TOP, value.coerceIn(PANEL_TOP_MIN, panelTopMax))
+            .remove(KEY_POSITION_BOTTOM)
+            .apply()
+
+    /** True when the panel sits in the lower half (used to shade a background photo). */
+    val panelInLowerHalf: Boolean
+        get() = panelTop + panelHeight / 2 > 540
+
+    var showMosqueName: Boolean
+        get() = p.getBoolean(KEY_SHOW_NAME, true)
+        set(value) = p.edit().putBoolean(KEY_SHOW_NAME, value).apply()
+
+    /** Google Fonts family name, e.g. "Poppins". Blank = the TV's own font (Roboto). */
+    var fontName: String
+        get() = p.getString(KEY_FONT, "") ?: ""
+        set(value) = p.edit().putString(KEY_FONT, value.trim()).apply()
 
     var clock12h: Boolean
         get() = p.getBoolean(KEY_CLOCK_12H, false)
@@ -75,7 +120,9 @@ object Prefs {
     // Projectivy can back up and restore plugin settings through these two.
     fun export(): String = JSONObject().apply {
         put(KEY_MOSQUE, mosque)
-        put(KEY_POSITION_BOTTOM, positionBottom)
+        put(KEY_SHOW_NAME, showMosqueName)
+        put(KEY_PANEL_TOP, panelTop)
+        put(KEY_FONT, fontName)
         put(KEY_CLOCK_12H, clock12h)
         put(KEY_BACKGROUND_URL, backgroundUrl)
     }.toString()
@@ -84,7 +131,10 @@ object Prefs {
         try {
             val o = JSONObject(json)
             if (o.has(KEY_MOSQUE)) mosque = o.getString(KEY_MOSQUE)
-            if (o.has(KEY_POSITION_BOTTOM)) positionBottom = o.getBoolean(KEY_POSITION_BOTTOM)
+            if (o.has(KEY_SHOW_NAME)) showMosqueName = o.getBoolean(KEY_SHOW_NAME)
+            if (o.has(KEY_FONT)) fontName = o.getString(KEY_FONT)
+            if (o.has(KEY_PANEL_TOP)) panelTop = o.getInt(KEY_PANEL_TOP)
+            else if (o.has(KEY_POSITION_BOTTOM) && o.getBoolean(KEY_POSITION_BOTTOM)) panelTop = 1080 - 90 - panelHeight
             if (o.has(KEY_CLOCK_12H)) clock12h = o.getBoolean(KEY_CLOCK_12H)
             if (o.has(KEY_BACKGROUND_URL)) backgroundUrl = o.getString(KEY_BACKGROUND_URL)
         } catch (_: Exception) {

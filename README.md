@@ -36,7 +36,11 @@ highlight moves on promptly after each prayer.
 | Setting | What it does |
 | --- | --- |
 | Masjidbox mosque | The part after `masjidbox.com/prayer-times/` in the mosque's link, or the whole link |
-| Position on screen | Top (default) or bottom |
+| Mosque name | Show or hide the name; the panel shrinks to fit when hidden |
+| Font | Default (Roboto) or a shortlist of Google Fonts |
+| Font by name | Any Google Fonts family, e.g. the one chosen in Projectivy's own font setting |
+| Move panel down / Move panel up | Shifts the panel 20 px per click; the home screen updates straight away |
+| Reset position | Puts the panel back where it started (190 px from the top) |
 | Clock | 24-hour (default) or 12-hour |
 | Background image URL | Optional photo behind the times; blank = green star pattern |
 | Refresh times now | Re-reads the mosque's page and shows what it found |

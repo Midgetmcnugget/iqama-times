@@ -28,9 +28,8 @@ object WallpaperRenderer {
     private val WHITE = Color.WHITE
     private val MUTED = Color.argb(0xB3, 0xFF, 0xFF, 0xFF)
 
-    private val light = Typeface.create("sans-serif-light", Typeface.NORMAL)
-    private val regular = Typeface.create("sans-serif", Typeface.NORMAL)
-    private val medium = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private const val PANEL_RADIUS = 44f
+    private const val CARD_RADIUS = 28f
 
     private fun paint(color: Int, size: Float, face: Typeface, align: Paint.Align = Paint.Align.LEFT) =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -64,79 +63,73 @@ object WallpaperRenderer {
 
         val prayers = PrayerTimes.fromJson(Prefs.timesJson)
         val twelve = Prefs.clock12h
+        // Chosen font (Google Fonts), or the TV's Roboto if none is set or it can't be loaded.
+        val regular = Fonts.regular(context)
+        val medium = Fonts.medium(context)
+        val showName = Prefs.showMosqueName
 
         // Panel geometry
         val panelW = 1680f
-        val panelH = 330f
+        val panelH = Prefs.panelHeight.toFloat()
         val left = (W - panelW) / 2f
-        val top = if (Prefs.positionBottom) H - 90f - panelH else 110f
+        val top = Prefs.panelTop.toFloat()
         val panel = RectF(left, top, left + panelW, top + panelH)
 
-        // Soft dark backing so the text reads on any background
-        c.drawRoundRect(panel, 36f, 36f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(0x8C, 0x04, 0x10, 0x12) })
-        c.drawRoundRect(panel, 36f, 36f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; strokeWidth = 2f; color = Color.argb(0x33, 0xFF, 0xFF, 0xFF)
-        })
+        Glass.drawPanel(bmp, c, panel, PANEL_RADIUS)
 
         val pad = 40f
+        val inner = Prefs.PANEL_PADDING.toFloat()
+        // Optional header with the mosque name; without it the panel is shorter and the tiles move up.
         val headerY = top + pad + 34f
         val title = mosqueTitle()
-        c.drawText(title, left + pad, headerY, paint(WHITE, 38f, medium))
+        if (showName) c.drawText(title, left + pad, headerY, paint(WHITE, 38f, medium))
 
         val nowMin = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
         if (prayers.isEmpty()) {
             val msg = if (Prefs.lastError.isNotBlank()) "Couldn't load times: ${Prefs.lastError}"
                       else "Loading iqamah times from Masjidbox…"
-            c.drawText(msg, panel.centerX(), panel.centerY() + 40f, paint(MUTED, 40f, regular, Paint.Align.CENTER))
+            val msgY = if (showName) panel.centerY() + 40f else panel.centerY() + 14f
+            c.drawText(msg, panel.centerX(), msgY, paint(MUTED, 40f, regular, Paint.Align.CENTER))
             return bmp
         }
 
         val cols = columns(prayers, now)
+        // The next prayer is highlighted. After Isha, highlight tomorrow's Fajr instead.
         val nextIdx = cols.indexOfFirst { col -> col.sortTime?.let { it > nowMin } == true }
-
-        // Header right: next iqamah
-        val nextText = if (nextIdx >= 0) {
-            val col = cols[nextIdx]
-            "Next iqamah  ·  ${col.label} ${PrayerTimes.format(col.iqamah ?: col.athan!!, twelve)}"
-        } else {
-            val fajr = cols.firstOrNull()
-            if (fajr?.sortTime != null) "Next  ·  Fajr tomorrow" else ""
-        }
-        c.drawText(nextText, panel.right - pad, headerY, paint(GOLD, 36f, medium, Paint.Align.RIGHT))
+            .let { if (it < 0 && cols.firstOrNull()?.sortTime != null) 0 else it }
 
         // Note if the times are from an earlier day (e.g. TV offline)
         if (Prefs.fetchedDay.isNotBlank() && Prefs.fetchedDay != MasjidboxFetcher.today()) {
             val note = "times from " + prettyDay(Prefs.fetchedDay)
-            val titleW = paint(WHITE, 38f, medium).measureText(title)
-            c.drawText(note, left + pad + titleW + 24f, headerY, paint(MUTED, 26f, regular))
+            if (showName) {
+                val titleW = paint(WHITE, 38f, medium).measureText(title)
+                c.drawText(note, left + pad + titleW + 24f, headerY, paint(MUTED, 26f, regular))
+            } else {
+                // No header: put the note just under the panel instead.
+                val below = if (panel.bottom + 44f < H) panel.bottom + 40f else panel.top - 14f
+                c.drawText(note, panel.right - pad, below, paint(MUTED, 26f, regular, Paint.Align.RIGHT))
+            }
         }
 
         // Cards
         val gap = 22f
-        val cardTop = headerY + 34f
-        val cardH = panel.bottom - pad + 8f - cardTop
+        val cardTop = top + inner + if (showName) Prefs.HEADER_HEIGHT.toFloat() else 0f
+        val cardH = Prefs.CARD_HEIGHT.toFloat()
         val cardW = (panelW - 2 * pad - gap * (cols.size - 1)) / cols.size
         cols.forEachIndexed { i, col ->
             val x = left + pad + i * (cardW + gap)
             val card = RectF(x, cardTop, x + cardW, cardTop + cardH)
             val isNext = i == nextIdx
             val passed = col.sortTime?.let { it <= nowMin } == true && !isNext
-            if (isNext) {
-                c.drawRoundRect(card, 24f, 24f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(0x40, 0xE8, 0xC2, 0x6A) })
-                c.drawRoundRect(card, 24f, 24f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE; strokeWidth = 4f; color = GOLD
-                })
-            } else {
-                c.drawRoundRect(card, 24f, 24f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(0x1A, 0xFF, 0xFF, 0xFF) })
-            }
+            Glass.drawCard(c, card, CARD_RADIUS, if (isNext) GOLD else null)
             val fade = if (passed) 0x80 else 0xFF
             val cx = card.centerX()
             c.drawText(col.label.uppercase(Locale.UK), cx, card.top + 50f,
                 paint(withAlpha(if (isNext) GOLD else MUTED, fade), 28f, medium, Paint.Align.CENTER).apply { letterSpacing = 0.12f })
             val big = col.iqamah ?: col.athan
             c.drawText(big?.let { PrayerTimes.format(it, twelve) } ?: "--:--", cx, card.top + 134f,
-                paint(withAlpha(WHITE, fade), 80f, light, Paint.Align.CENTER))
+                paint(withAlpha(WHITE, fade), 80f, regular, Paint.Align.CENTER))
             val small = when {
                 col.iqamah != null && col.athan != null -> "Adhan " + PrayerTimes.format(col.athan, twelve)
                 col.iqamah == null && col.athan != null -> "Start time"
@@ -170,8 +163,8 @@ object WallpaperRenderer {
             val sx = (photo.width - sw) / 2; val sy = (photo.height - sh) / 2
             c.drawBitmap(photo, Rect(sx, sy, sx + sw, sy + sh), Rect(0, 0, W, H), Paint(Paint.FILTER_BITMAP_FLAG))
             photo.recycle()
-            val shadeTop = if (Prefs.positionBottom) 0.15f else 0.55f
-            val shadeBottom = if (Prefs.positionBottom) 0.55f else 0.25f
+            val shadeTop = if (Prefs.panelInLowerHalf) 0.15f else 0.55f
+            val shadeBottom = if (Prefs.panelInLowerHalf) 0.55f else 0.25f
             c.drawRect(0f, 0f, W.toFloat(), H.toFloat(), Paint().apply {
                 shader = LinearGradient(0f, 0f, 0f, H.toFloat(),
                     Color.argb((shadeTop * 255).toInt(), 0, 0, 0), Color.argb((shadeBottom * 255).toInt(), 0, 0, 0),
