@@ -173,6 +173,108 @@
         <TextView
             style="@style/SettingsLabel"
             android:layout_marginTop="20dp"
+            android:text="@string/text_label" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/size_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/size_small"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/size_small" />
+
+            <Button
+                android:id="@+id/size_medium"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/size_medium" />
+
+            <Button
+                android:id="@+id/size_large"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/size_large" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:layout_marginTop="12dp"
+            android:text="@string/names_label" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/names_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/names_en"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/names_en" />
+
+            <Button
+                android:id="@+id/names_ar"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/names_ar" />
+
+            <Button
+                android:id="@+id/names_both"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/names_both" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/bold_times"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/bold_times" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/fade_passed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/fade_passed" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/text_outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/text_outline" />
+
+        <TextView
+            style="@style/SettingsHelp"
+            android:text="@string/text_outline_help" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:layout_marginTop="20dp"
             android:text="@string/appearance_label" />
 
         <TextView

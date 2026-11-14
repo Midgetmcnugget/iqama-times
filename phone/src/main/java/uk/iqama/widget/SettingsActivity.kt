@@ -129,6 +129,7 @@ class SettingsActivity : AppCompatActivity() {
         bindOffsets()
 
         bindLook()
+        bindText()
         bindAppearance()
 
         findViewById<Button>(R.id.save).setOnClickListener { saveAndRefresh() }
@@ -158,11 +159,8 @@ class SettingsActivity : AppCompatActivity() {
     private fun bindLook() {
         val group = findViewById<MaterialButtonToggleGroup>(R.id.style_group)
         val help = findViewById<TextView>(R.id.style_help)
-        val glassOptions = findViewById<View>(R.id.glass_options)
         fun show() {
-            val glass = prefs.style == Prefs.STYLE_GLASS
-            help.setText(if (glass) R.string.style_glass_help else R.string.style_strip_help)
-            glassOptions.visibility = if (glass) View.VISIBLE else View.GONE
+            help.setText(if (prefs.style == Prefs.STYLE_GLASS) R.string.style_glass_help else R.string.style_strip_help)
         }
         group.check(if (prefs.style == Prefs.STYLE_GLASS) R.id.style_glass else R.id.style_strip)
         show()
@@ -198,6 +196,27 @@ class SettingsActivity : AppCompatActivity() {
             changed()
         }
         showPicture()
+    }
+
+    /** Text size, prayer-name language and the readability switches. */
+    private fun bindText() {
+        val sizes = listOf(R.id.size_small, R.id.size_medium, R.id.size_large)
+        val size = findViewById<MaterialButtonToggleGroup>(R.id.size_group)
+        size.check(sizes[prefs.textSize])
+        size.addOnButtonCheckedListener { _, id, checked ->
+            if (checked) { prefs.textSize = sizes.indexOf(id).coerceAtLeast(0); changed() }
+        }
+
+        val names = listOf(R.id.names_en to "en", R.id.names_ar to "ar", R.id.names_both to "both")
+        val nameGroup = findViewById<MaterialButtonToggleGroup>(R.id.names_group)
+        nameGroup.check(names.firstOrNull { it.second == prefs.nameLanguage }?.first ?: R.id.names_en)
+        nameGroup.addOnButtonCheckedListener { _, id, checked ->
+            if (checked) { prefs.nameLanguage = names.firstOrNull { it.first == id }?.second ?: "en"; changed() }
+        }
+
+        bindSwitch(R.id.bold_times, prefs.boldTimes) { prefs.boldTimes = it }
+        bindSwitch(R.id.fade_passed, prefs.fadePassed) { prefs.fadePassed = it }
+        bindSwitch(R.id.text_outline, prefs.textOutline) { prefs.textOutline = it }
     }
 
     private fun showPicture() {

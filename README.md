@@ -58,17 +58,16 @@ The same times as a home-screen widget for Android phones (Android 8 or newer).
 3. Tap the widget to choose its mosque (pick a recent one or type a new one) and, for mosques
    whose page only lists adhan times, set **Iqamah after adhan**.
 
-* **Look:** *Liquid glass* (default) matches the TV plugin: a glass panel with a tile per
-  prayer, the iqamah time large and "Adhan hh:mm" underneath, the next prayer in gold. It has
-  the TV's font choice (any Google Font) and an optional background picture, frosted behind
-  the glass. *Timetable strip* is the alternative layout described below.
-* **One row high (e.g. 5×1):** every prayer's name, adhan time (bold) and iqamah time; the
-  next prayer's iqamah is in a gold box.
-* **Two rows or taller:** a banner with the mosque, the next prayer and a live countdown to its
-  adhan or iqamah, above the same row.
-* Each widget can show a different mosque. Sunrise, the mosque name and the 12-hour clock can be
-  switched on or off. **Allow exact timing** (in settings) makes the highlight and countdown
-  switch over exactly at each adhan and iqamah.
+* **Look:** *Liquid glass* (the TV plugin's glass panel, a glass tile per prayer) or
+  *Timetable strip* (flat panel). Both show the prayer name, the adhan time large and the iqamah
+  time underneath, with the next prayer's iqamah in a gold box.
+* **Two rows or taller:** a banner with the mosque, the next prayer and a live countdown.
+* **Text:** any Google Font, Small/Medium/Large, bold times, prayer names in English, Arabic or
+  both (stacked), optional fading of passed prayers and an optional outline for see-through
+  widgets or busy pictures.
+* **Background:** colour (or phone theme), transparency, and an optional picture (frosted).
+* Each widget can show a different mosque. **Allow exact timing** makes the highlight and
+  countdown switch over exactly at each adhan and iqamah.
 
 ## How it works
 

@@ -8,24 +8,21 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import java.util.Calendar
 
 /**
- * Home-screen widget in the style of a mosque timetable strip:
- *  - one row high (e.g. 5x1): each prayer's name, adhan time (bold) and iqamah time underneath,
- *    with the next prayer's iqamah in a gold box;
- *  - two rows or taller: a banner on top with the mosque, the next prayer and a live countdown
- *    to its adhan or iqamah.
- * Each widget can show a different mosque. It redraws at every adhan and iqamah time and
- * refreshes the times in the background a few times a day.
+ * Home-screen widget. Both looks (liquid glass and timetable strip) are drawn as one picture by
+ * [WidgetRenderer] at the widget's exact size, so any Google Font can be used. On taller widgets
+ * a real ticking countdown is laid over the banner. Each widget can show a different mosque;
+ * it redraws at every adhan and iqamah and refreshes the times a few times a day.
  */
 class IqamaWidget : AppWidgetProvider() {
 
@@ -36,7 +33,7 @@ class IqamaWidget : AppWidgetProvider() {
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
-        updateAll(context)  // resized: switch between the one-row and banner layouts
+        updateAll(context)  // resized: redraw at the new size
     }
 
     override fun onEnabled(context: Context) {
@@ -73,16 +70,7 @@ class IqamaWidget : AppWidgetProvider() {
     companion object {
         private const val ACTION_TICK = "uk.iqama.widget.TICK"
         private const val AUTO_REFRESH_GAP_MS = 15 * 60 * 1000L
-        /** At or above this height (dp) the banner layout is used. */
-        private const val FULL_LAYOUT_MIN_HEIGHT = 130
-
-        private val CHIP_TEXT = Color.rgb(0x14, 0x23, 0x2B)
-
         private val ORDER = listOf("FAJR", "SHURUQ", "DHUHR", "ASR", "MAGHRIB", "ISHA")
-        private val CELLS = intArrayOf(R.id.cell0, R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4, R.id.cell5)
-        private val NAMES = intArrayOf(R.id.name0, R.id.name1, R.id.name2, R.id.name3, R.id.name4, R.id.name5)
-        private val ADHANS = intArrayOf(R.id.adhan0, R.id.adhan1, R.id.adhan2, R.id.adhan3, R.id.adhan4, R.id.adhan5)
-        private val IQAMAHS = intArrayOf(R.id.iqamah0, R.id.iqamah1, R.id.iqamah2, R.id.iqamah3, R.id.iqamah4, R.id.iqamah5)
 
         private fun widgetIds(context: Context): IntArray =
             AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, IqamaWidget::class.java))
@@ -117,22 +105,10 @@ class IqamaWidget : AppWidgetProvider() {
                 val m = prefs.mosque(prefs.mosqueFor(id))
                 val cols = columns(m, now)
                 cols.forEach { c -> c.athan?.let { events.add(it) }; c.iqamah?.let { events.add(it) } }
-                if (prefs.style == Prefs.STYLE_GLASS) {
-                    manager.updateAppWidget(id, buildGlass(context, prefs, m, cols, now, id, manager))
-                    continue
-                }
-                val compact = build(context, prefs, m, cols, now, id, full = false)
-                val full = build(context, prefs, m, cols, now, id, full = true)
-                if (Build.VERSION.SDK_INT >= 31) {
-                    // The launcher picks the layout that fits the widget's current size.
-                    manager.updateAppWidget(id, RemoteViews(mapOf(
-                        SizeF(150f, 40f) to compact,
-                        SizeF(150f, FULL_LAYOUT_MIN_HEIGHT.toFloat()) to full
-                    )))
-                } else {
-                    val opts = manager.getAppWidgetOptions(id)
-                    val h = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-                    manager.updateAppWidget(id, if (h >= FULL_LAYOUT_MIN_HEIGHT) full else compact)
+                try {
+                    manager.updateAppWidget(id, buildViews(context, prefs, m, cols, now, id, manager))
+                } catch (e: Throwable) {
+                    android.util.Log.e("IqamaWidget", "Couldn't draw widget $id", e)
                 }
             }
             scheduleNextTick(context, now, events)
@@ -188,116 +164,31 @@ class IqamaWidget : AppWidgetProvider() {
             return (if (w > 0) w.toFloat() else 320f) to (if (h > 0) h.toFloat() else 90f)
         }
 
-        /** Glass look: the TV plugin's tiles drawn as one picture at the widget's exact size. */
-        private fun buildGlass(
+        private fun buildViews(
             context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>,
             now: Calendar, widgetId: Int, manager: AppWidgetManager
         ): RemoteViews {
-            val v = RemoteViews(context.packageName, R.layout.widget_glass)
+            val v = RemoteViews(context.packageName, R.layout.widget_picture)
             v.setOnClickPendingIntent(R.id.root, openSettings(context, widgetId))
             val (wDp, hDp) = sizeDp(manager, widgetId)
-            v.setImageViewBitmap(R.id.glass, GlassRenderer.render(context, prefs, m, cols, now, wDp, hDp))
+            val result = WidgetRenderer.render(context, prefs, m, cols, now, wDp, hDp)
+            v.setImageViewBitmap(R.id.picture, result.bitmap)
+
+            val cd = result.countdown
+            if (cd == null) {
+                v.setViewVisibility(R.id.countdown, View.GONE)
+            } else {
+                // Place the ticking countdown over the banner, right-aligned under its label.
+                val d = context.resources.displayMetrics.density
+                v.setViewPadding(R.id.countdown_box, 0, (cd.topDp * d).toInt(), (cd.endDp * d).toInt(), 0)
+                v.setTextViewTextSize(R.id.countdown, TypedValue.COMPLEX_UNIT_DIP, cd.sizeDp)
+                v.setTextColor(R.id.countdown, cd.color)
+                v.setChronometer(R.id.countdown,
+                    SystemClock.elapsedRealtime() + (cd.targetMillis - System.currentTimeMillis()), null, true)
+                v.setChronometerCountDown(R.id.countdown, true)
+                v.setViewVisibility(R.id.countdown, View.VISIBLE)
+            }
             return v
-        }
-
-        private fun build(
-            context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>,
-            now: Calendar, widgetId: Int, full: Boolean
-        ): RemoteViews {
-            val v = RemoteViews(context.packageName, if (full) R.layout.widget_full else R.layout.widget_compact)
-            val twelve = prefs.clock12h
-
-            // Flat background in the chosen colour and transparency; text colours to match.
-            val bgColor = Appearance.colorFor(context, prefs.background)
-            val pal = Appearance.paletteFor(bgColor, prefs.opacity)
-            v.setInt(R.id.bg, "setColorFilter", bgColor or 0xFF000000.toInt())
-            v.setFloat(R.id.bg, "setAlpha", prefs.opacity / 100f)
-            v.setTextColor(R.id.message, pal.muted)
-            if (full) {
-                v.setInt(R.id.banner, "setBackgroundResource",
-                    if (pal.lightBackground) R.drawable.banner_bg_dark else R.drawable.banner_bg)
-                v.setTextColor(R.id.mosque_name, pal.text)
-                v.setTextColor(R.id.next_name, pal.text)
-                v.setTextColor(R.id.countdown_label, pal.muted)
-                v.setTextColor(R.id.countdown, pal.text)
-            }
-
-            v.setOnClickPendingIntent(R.id.root, openSettings(context, widgetId))
-
-            val haveTimes = cols.any { it.athan != null }
-            v.setViewVisibility(R.id.row, if (haveTimes) View.VISIBLE else View.GONE)
-            v.setViewVisibility(R.id.message, if (haveTimes) View.GONE else View.VISIBLE)
-            if (full) {
-                v.setTextViewText(R.id.mosque_name, m.name)
-                v.setViewVisibility(R.id.mosque_name, if (prefs.showName) View.VISIBLE else View.GONE)
-            }
-            if (!haveTimes) {
-                v.setTextViewText(
-                    R.id.message,
-                    if (m.lastError.isNotBlank()) "${m.name}: couldn't load times (${m.lastError}). Tap to check."
-                    else "Loading times for ${m.name}…"
-                )
-                if (full) {
-                    v.setTextViewText(R.id.next_name, "")
-                    v.setTextViewText(R.id.countdown_label, "")
-                    v.setViewVisibility(R.id.countdown, View.GONE)
-                }
-                return v
-            }
-
-            val nowMin = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-            val next = nextIndex(cols, nowMin)
-
-            cols.forEachIndexed { i, col ->
-                if (col.isSunrise && !prefs.showSunrise) {
-                    v.setViewVisibility(CELLS[i], View.GONE); return@forEachIndexed
-                }
-                v.setViewVisibility(CELLS[i], View.VISIBLE)
-                val isNext = i == next
-                val passed = !isNext && (col.endTime?.let { it <= nowMin } == true)
-
-                v.setTextViewText(NAMES[i], col.label)
-                v.setTextColor(NAMES[i], when { isNext -> pal.text; passed -> pal.fadedMuted; else -> pal.muted })
-
-                v.setTextViewText(ADHANS[i], col.athan?.let { PrayerTimes.format(it, twelve) } ?: "--:--")
-                v.setTextColor(ADHANS[i], if (passed) pal.faded else pal.text)
-
-                v.setTextViewText(IQAMAHS[i], col.iqamah?.let { PrayerTimes.format(it, twelve) } ?: "--")
-                v.setInt(IQAMAHS[i], "setBackgroundResource", if (isNext) R.drawable.iqamah_chip_next else 0)
-                v.setTextColor(IQAMAHS[i], when { isNext -> CHIP_TEXT; passed -> pal.fadedMuted; else -> pal.muted })
-            }
-
-            if (full) bindBanner(v, cols, next, nowMin)
-            return v
-        }
-
-        /** "Isha · Time until iqamah 47:16", counting down live (no redraw needed each second). */
-        private fun bindBanner(v: RemoteViews, cols: List<Column>, next: Int, nowMin: Int) {
-            val col = cols.getOrNull(next) ?: return
-            v.setTextViewText(R.id.next_name, col.label)
-            val athan = col.athan
-            val iqamah = col.iqamah
-            // Before the adhan: count to the adhan. Between adhan and iqamah: count to the iqamah.
-            // After Isha the next is tomorrow's Fajr.
-            val tomorrow = (col.endTime ?: 0) <= nowMin
-            val (label, targetMin) = when {
-                tomorrow && athan != null -> "Time until adhan" to athan + 24 * 60
-                athan != null && athan > nowMin -> "Time until adhan" to athan
-                iqamah != null -> "Time until iqamah" to iqamah
-                else -> "" to null
-            }
-            v.setTextViewText(R.id.countdown_label, label)
-            if (targetMin == null) {
-                v.setViewVisibility(R.id.countdown, View.GONE); return
-            }
-            val cal = Calendar.getInstance()
-            val nowMs = cal.timeInMillis
-            cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
-            val targetMs = cal.timeInMillis + targetMin * 60_000L
-            v.setViewVisibility(R.id.countdown, View.VISIBLE)
-            v.setChronometer(R.id.countdown, SystemClock.elapsedRealtime() + (targetMs - nowMs), null, true)
-            v.setChronometerCountDown(R.id.countdown, true)
         }
 
         private fun alarmManager(context: Context) = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

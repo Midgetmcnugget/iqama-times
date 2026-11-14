@@ -86,6 +86,27 @@ object Glass {
         })
     }
 
+    /** The timetable strip's flat panel: optional frosted picture, then the tint. No border. */
+    fun drawFlat(c: Canvas, rect: RectF, radius: Float, backdrop: Bitmap?, tint: Int, tintAlpha: Int) {
+        val clip = Path().apply { addRoundRect(rect, radius, radius, Path.Direction.CW) }
+        c.save()
+        c.clipPath(clip)
+        if (backdrop != null) {
+            val frosted = blur(backdrop, levels = 4)
+            c.drawBitmap(frosted, null, Rect(0, 0, c.width, c.height), Paint(Paint.FILTER_BITMAP_FLAG))
+            if (frosted !== backdrop) frosted.recycle()
+        }
+        c.drawRect(rect, Paint().apply { color = withAlpha(tint, tintAlpha) })
+        c.restore()
+    }
+
+    /** The strip's flat banner: a slightly lighter (or darker, on light colours) band. */
+    fun drawFlatCard(c: Canvas, rect: RectF, radius: Float, lightBackground: Boolean) {
+        c.drawRoundRect(rect, radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (lightBackground) Color.argb(0x14, 0, 0, 0) else white(0x24)
+        })
+    }
+
     /** A smaller glass tile inside the panel. [accent] (gold) tints the highlighted tile. */
     fun drawCard(c: Canvas, rect: RectF, radius: Float, u: Float, accent: Int?) {
         val base = accent ?: Color.WHITE

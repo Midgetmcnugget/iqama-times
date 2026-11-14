@@ -34,12 +34,16 @@ object Fonts {
 
     private val systemRegular: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
     private val systemMedium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private val systemBold: Typeface = Typeface.create("sans-serif", Typeface.BOLD)
 
     /** Regular weight of [name], or Roboto while it downloads (then the widget redraws). */
     fun regular(context: Context, name: String): Typeface = get(context, name, 400) ?: systemRegular
 
     /** Medium weight, for labels and the mosque name. */
     fun medium(context: Context, name: String): Typeface = get(context, name, 500) ?: systemMedium
+
+    /** Bold weight, for the "Bold times" option. */
+    fun bold(context: Context, name: String): Typeface = get(context, name, 700) ?: systemBold
 
     private fun get(context: Context, name: String, weight: Int): Typeface? {
         if (name.isBlank()) return null

@@ -57,6 +57,31 @@ class Prefs(context: Context) {
         get() = p.getString("background_picture", "") ?: ""
         set(v) = p.edit().putString("background_picture", v).apply()
 
+    /** Text size: 0 = small, 1 = medium, 2 = large. */
+    var textSize: Int
+        get() = p.getInt("text_size", 1)
+        set(v) = p.edit().putInt("text_size", v.coerceIn(0, 2)).apply()
+
+    /** Draw the adhan times in bold. */
+    var boldTimes: Boolean
+        get() = p.getBoolean("bold_times", false)
+        set(v) = p.edit().putBoolean("bold_times", v).apply()
+
+    /** Fade prayers that have already passed. */
+    var fadePassed: Boolean
+        get() = p.getBoolean("fade_passed", true)
+        set(v) = p.edit().putBoolean("fade_passed", v).apply()
+
+    /** Soft outline round the text, for see-through widgets and busy pictures. */
+    var textOutline: Boolean
+        get() = p.getBoolean("text_outline", false)
+        set(v) = p.edit().putBoolean("text_outline", v).apply()
+
+    /** Prayer names: "en", "ar" or "both" (stacked). */
+    var nameLanguage: String
+        get() = p.getString("name_language", "en") ?: "en"
+        set(v) = p.edit().putString("name_language", v).apply()
+
     /** Mosques used before, most recent first, for the picker. */
     var recentMosques: List<String>
         get() {
