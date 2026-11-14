@@ -117,6 +117,10 @@ class IqamaWidget : AppWidgetProvider() {
                 val m = prefs.mosque(prefs.mosqueFor(id))
                 val cols = columns(m, now)
                 cols.forEach { c -> c.athan?.let { events.add(it) }; c.iqamah?.let { events.add(it) } }
+                if (prefs.style == Prefs.STYLE_GLASS) {
+                    manager.updateAppWidget(id, buildGlass(context, prefs, m, cols, now, id, manager))
+                    continue
+                }
                 val compact = build(context, prefs, m, cols, now, id, full = false)
                 val full = build(context, prefs, m, cols, now, id, full = true)
                 if (Build.VERSION.SDK_INT >= 31) {
@@ -161,6 +165,41 @@ class IqamaWidget : AppWidgetProvider() {
             return if (i >= 0) i else cols.indexOfFirst { !it.isSunrise && it.endTime != null }
         }
 
+        /** Tapping a widget opens its settings (mosque etc.). */
+        private fun openSettings(context: Context, widgetId: Int): PendingIntent {
+            val open = Intent(context, SettingsActivity::class.java)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                .setData(Uri.parse("iqama://widget/$widgetId"))  // keeps each widget's intent distinct
+            return PendingIntent.getActivity(context, widgetId, open,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        /** The widget's size in dp as it is on screen (portrait), with a sensible default. */
+        private fun sizeDp(manager: AppWidgetManager, id: Int): Pair<Float, Float> {
+            val opts = manager.getAppWidgetOptions(id)
+            if (Build.VERSION.SDK_INT >= 31) {
+                @Suppress("DEPRECATION")
+                val sizes = opts.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+                val tallest = sizes?.maxByOrNull { it.height }
+                if (tallest != null && tallest.width > 0 && tallest.height > 0) return tallest.width to tallest.height
+            }
+            val w = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            val h = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+            return (if (w > 0) w.toFloat() else 320f) to (if (h > 0) h.toFloat() else 90f)
+        }
+
+        /** Glass look: the TV plugin's tiles drawn as one picture at the widget's exact size. */
+        private fun buildGlass(
+            context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>,
+            now: Calendar, widgetId: Int, manager: AppWidgetManager
+        ): RemoteViews {
+            val v = RemoteViews(context.packageName, R.layout.widget_glass)
+            v.setOnClickPendingIntent(R.id.root, openSettings(context, widgetId))
+            val (wDp, hDp) = sizeDp(manager, widgetId)
+            v.setImageViewBitmap(R.id.glass, GlassRenderer.render(context, prefs, m, cols, now, wDp, hDp))
+            return v
+        }
+
         private fun build(
             context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>,
             now: Calendar, widgetId: Int, full: Boolean
@@ -183,15 +222,7 @@ class IqamaWidget : AppWidgetProvider() {
                 v.setTextColor(R.id.countdown, pal.text)
             }
 
-            // Tapping opens this widget's settings (mosque etc.).
-            val open = Intent(context, SettingsActivity::class.java)
-                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                .setData(Uri.parse("iqama://widget/$widgetId"))  // keeps each widget's intent distinct
-            v.setOnClickPendingIntent(
-                R.id.root,
-                PendingIntent.getActivity(context, widgetId, open,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            )
+            v.setOnClickPendingIntent(R.id.root, openSettings(context, widgetId))
 
             val haveTimes = cols.any { it.athan != null }
             v.setViewVisibility(R.id.row, if (haveTimes) View.VISIBLE else View.GONE)

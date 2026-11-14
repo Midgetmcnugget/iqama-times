@@ -42,6 +42,21 @@ class Prefs(context: Context) {
         get() = p.getInt("opacity", 85)
         set(v) = p.edit().putInt("opacity", v.coerceIn(0, 100)).apply()
 
+    /** Widget look: "glass" (the TV plugin's liquid glass tiles) or "strip" (timetable strip). */
+    var style: String
+        get() = p.getString("style", STYLE_GLASS) ?: STYLE_GLASS
+        set(v) = p.edit().putString("style", v).apply()
+
+    /** Google Fonts family for the glass look, e.g. "Poppins". Blank = Roboto. */
+    var fontName: String
+        get() = p.getString("font_name", "") ?: ""
+        set(v) = p.edit().putString("font_name", v.trim()).apply()
+
+    /** Name of the background picture behind the glass ("" = none). */
+    var backgroundPicture: String
+        get() = p.getString("background_picture", "") ?: ""
+        set(v) = p.edit().putString("background_picture", v).apply()
+
     /** Mosques used before, most recent first, for the picker. */
     var recentMosques: List<String>
         get() {
@@ -121,6 +136,8 @@ class Prefs(context: Context) {
 
     companion object {
         const val DEFAULT_MOSQUE = "masjid-al-falah-coventry"
+        const val STYLE_GLASS = "glass"
+        const val STYLE_STRIP = "strip"
 
         /** "https://masjidbox.com/prayer-times/chingford-mosque?x" -> "chingford-mosque". */
         fun slug(input: String): String {

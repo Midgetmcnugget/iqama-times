@@ -19,7 +19,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -42,6 +47,22 @@ class SettingsActivity : AppCompatActivity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     /** The mosque currently selected on this screen. */
     private var slug = Prefs.DEFAULT_MOSQUE
+
+    /** Background picture chosen with the phone's file picker. */
+    private val pickPicture = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val label = findViewById<TextView>(R.id.picture_name)
+        label.setText(R.string.picture_copying)
+        val app = applicationContext
+        Thread {
+            val error = BackgroundImage.importFrom(app, uri)
+            Handler(Looper.getMainLooper()).post {
+                if (error != null) Toast.makeText(app, error, Toast.LENGTH_LONG).show()
+                if (!isFinishing && !isDestroyed) showPicture()
+                IqamaWidget.updateAll(app)
+            }
+        }.start()
+    }
 
     private val iqamahChoices = listOf(-1, 5, 10, 15, 20, 25, 30)
     private val maghribChoices = listOf(0, 5, 10, 15)
@@ -107,6 +128,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         bindOffsets()
 
+        bindLook()
         bindAppearance()
 
         findViewById<Button>(R.id.save).setOnClickListener { saveAndRefresh() }
@@ -131,6 +153,85 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun forWidget() = widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /** Glass or strip look, plus the glass look's font and background picture. */
+    private fun bindLook() {
+        val group = findViewById<MaterialButtonToggleGroup>(R.id.style_group)
+        val help = findViewById<TextView>(R.id.style_help)
+        val glassOptions = findViewById<View>(R.id.glass_options)
+        fun show() {
+            val glass = prefs.style == Prefs.STYLE_GLASS
+            help.setText(if (glass) R.string.style_glass_help else R.string.style_strip_help)
+            glassOptions.visibility = if (glass) View.VISIBLE else View.GONE
+        }
+        group.check(if (prefs.style == Prefs.STYLE_GLASS) R.id.style_glass else R.id.style_strip)
+        show()
+        group.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            prefs.style = if (id == R.id.style_glass) Prefs.STYLE_GLASS else Prefs.STYLE_STRIP
+            show()
+            changed()
+        }
+
+        // Font: shortlist, or any Google Fonts name typed in.
+        val font = findViewById<MaterialAutoCompleteTextView>(R.id.font)
+        val items = listOf(getString(R.string.font_default)) + Fonts.CHOICES
+        font.setAdapter(AllItemsAdapter(items))
+        font.setText(prefs.fontName.ifBlank { getString(R.string.font_default) }, false)
+        font.setOnClickListener { font.showDropDown() }
+        font.setOnItemClickListener { parent, _, pos, _ ->
+            val name = parent.getItemAtPosition(pos).toString()
+            applyFont(if (name == getString(R.string.font_default)) "" else name)
+        }
+        font.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val typed = font.text.toString().trim()
+                applyFont(if (typed.equals(getString(R.string.font_default), true)) "" else typed)
+                true
+            } else false
+        }
+
+        findViewById<Button>(R.id.pick_picture).setOnClickListener { pickPicture.launch(arrayOf("image/*")) }
+        findViewById<Button>(R.id.remove_picture).setOnClickListener {
+            BackgroundImage.clear(this)
+            showPicture()
+            changed()
+        }
+        showPicture()
+    }
+
+    private fun showPicture() {
+        val name = prefs.backgroundPicture
+        findViewById<TextView>(R.id.picture_name).text =
+            if (name.isBlank()) getString(R.string.picture_none) else getString(R.string.picture_using, name)
+        findViewById<View>(R.id.remove_picture).visibility = if (name.isBlank()) View.GONE else View.VISIBLE
+    }
+
+    /** Downloads the font first and only switches if it worked, so a typo never breaks the widget. */
+    private fun applyFont(name: String) {
+        val fontField = findViewById<MaterialAutoCompleteTextView>(R.id.font)
+        val help = findViewById<TextView>(R.id.font_help)
+        if (name.isBlank()) {
+            prefs.fontName = ""
+            fontField.setText(getString(R.string.font_default), false)
+            help.setText(R.string.font_help)
+            changed()
+            return
+        }
+        help.text = getString(R.string.font_downloading, name)
+        val app = applicationContext
+        Thread {
+            val ok = Fonts.prepare(app, name)
+            Handler(Looper.getMainLooper()).post {
+                if (ok) prefs.fontName = name
+                if (!isFinishing && !isDestroyed) {
+                    help.text = if (ok) getString(R.string.font_help) else getString(R.string.font_failed, name)
+                    fontField.setText(prefs.fontName.ifBlank { getString(R.string.font_default) }, false)
+                }
+                IqamaWidget.updateAll(app)
+            }
+        }.start()
+    }
 
     /** Colour swatches and the transparency slider; changes show on the widget straight away. */
     private fun bindAppearance() {

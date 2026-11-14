@@ -2,6 +2,7 @@
 <!-- Toolbar + scrolling settings. The root is padded for the status/navigation bars and the
      keyboard in code, so nothing sits underneath them. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -74,6 +75,100 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:text="@string/clock_12h" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:layout_marginTop="20dp"
+            android:text="@string/look_label" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/style_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/style_glass"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/style_glass" />
+
+            <Button
+                android:id="@+id/style_strip"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/style_strip" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <TextView
+            android:id="@+id/style_help"
+            style="@style/SettingsHelp" />
+
+        <LinearLayout
+            android:id="@+id/glass_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/font_label">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/font"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:completionThreshold="0"
+                    android:imeOptions="actionDone"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:id="@+id/font_help"
+                style="@style/SettingsHelp"
+                android:text="@string/font_help" />
+
+            <TextView
+                style="@style/SettingsLabel"
+                android:layout_marginTop="12dp"
+                android:text="@string/picture_label" />
+
+            <TextView
+                android:id="@+id/picture_name"
+                style="@style/SettingsHelp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/pick_picture"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pick_picture" />
+
+                <Button
+                    android:id="@+id/remove_picture"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/remove_picture" />
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             style="@style/SettingsLabel"

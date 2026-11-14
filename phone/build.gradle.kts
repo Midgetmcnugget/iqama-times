@@ -24,8 +24,8 @@ android {
         applicationId = "uk.iqama.widget"
         minSdk = 26
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     // Same fixed key as the TV app, so each new build installs over the previous one.
@@ -49,5 +49,6 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.appcompat)
     implementation(libs.google.material)
+    implementation("androidx.activity:activity:1.9.3")
     implementation("androidx.work:work-runtime:2.10.0")
 }
