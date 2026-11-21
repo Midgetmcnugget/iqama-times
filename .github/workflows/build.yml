@@ -54,3 +54,5 @@ jobs:
           gh release create latest iqama-times.apk iqama-widget.apk \
             --title "Iqama Times – latest build" \
             --notes "Built from ${GITHUB_SHA::7}. TV: iqama-times.apk (Projectivy plugin, Downloader code 1308169). Phone: iqama-widget.apk (home-screen widget) – open this page on your phone and tap it to install."
+          # Make sure it's published, not left as a draft (download links only work for published releases)
+          gh release edit latest --draft=false --latest
