@@ -45,7 +45,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var maghribSpinner: Spinner
 
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private lateinit var sourceGroup: MaterialButtonToggleGroup
     /** The mosque currently selected on this screen. */
     private var slug = Prefs.DEFAULT_MOSQUE
 
@@ -107,17 +106,10 @@ class SettingsActivity : AppCompatActivity() {
         mosqueField.setOnItemClickListener { parent, _, pos, _ ->
             val chosen = slugFromItem(parent.getItemAtPosition(pos).toString())
             mosqueField.setText(chosen, false)
+            clearResults()
             selectMosque(chosen, refresh = true)
-            showSource(Mawaqit.isMawaqit(chosen))
         }
-
-        // Masjidbox or Mawaqit: decides how a bare name typed in the box is looked up.
-        sourceGroup = findViewById(R.id.source_group)
-        showSource(Mawaqit.isMawaqit(slug))
-        sourceGroup.addOnButtonCheckedListener { _, id, checked ->
-            if (checked) findViewById<TextView>(R.id.mosque_help).setText(
-                if (id == R.id.source_mawaqit) R.string.mosque_help_mawaqit else R.string.mosque_help)
-        }
+        findViewById<Button>(R.id.find_mosque).setOnClickListener { saveAndRefresh() }
         // Always offer the whole list when the field is tapped.
         mosqueField.setOnClickListener { mosqueField.showDropDown() }
         mosqueField.setOnEditorActionListener { _, actionId, _ ->
@@ -164,13 +156,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun forWidget() = widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
-
-    private fun showSource(mawaqit: Boolean) {
-        sourceGroup.check(if (mawaqit) R.id.source_mawaqit else R.id.source_masjidbox)
-        findViewById<TextView>(R.id.mosque_help).setText(if (mawaqit) R.string.mosque_help_mawaqit else R.string.mosque_help)
-    }
-
-    private fun mawaqitSelected() = sourceGroup.checkedButtonId == R.id.source_mawaqit
 
     /** Glass or strip look, plus the glass look's font and background picture. */
     private fun bindLook() {
@@ -383,13 +368,131 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveAndRefresh() {
         val typed = mosqueField.text.toString().trim()
-        // A pasted link says which service it's from; a bare name uses the Masjidbox/Mawaqit switch.
-        val key = if (typed.contains("·")) slugFromItem(typed) else Prefs.slug(typed, mawaqitSelected())
+        val isLink = typed.contains("://") || typed.contains("masjidbox.com", true) ||
+            typed.contains("mawaqit.net", true) || typed.startsWith(Mawaqit.PREFIX, true)
+        val known = typed.contains("·") || typed.isEmpty() || Prefs.slug(typed) == slug ||
+            prefs.recentMosques.contains(Prefs.slug(typed))
+        if (!isLink && !known) {
+            search(typed)  // a name: look it up on Mawaqit and Masjidbox
+            return
+        }
+        val key = if (typed.contains("·")) slugFromItem(typed) else Prefs.slug(typed)
+        clearResults()
         if (typed.isNotEmpty() && key != slug) selectMosque(key, refresh = false)
         else prefs.rememberMosque(slug)
-        showSource(Mawaqit.isMawaqit(slug))
         mosqueField.setText(slug, false)
         refresh()
+    }
+
+    // ---- finding a mosque by name ----
+
+    private var searchRun = 0
+
+    private fun clearResults() {
+        searchRun++  // ignore any search still running
+        findViewById<LinearLayout>(R.id.search_results).removeAllViews()
+        findViewById<TextView>(R.id.search_status).visibility = View.GONE
+        findViewById<Button>(R.id.find_mosque).isEnabled = true
+    }
+
+    /** Searches both services at once, then picks the best match and lists the others. */
+    private fun search(query: String) {
+        clearResults()
+        val run = searchRun
+        val searchStatus = findViewById<TextView>(R.id.search_status)
+        val findButton = findViewById<Button>(R.id.find_mosque)
+        searchStatus.visibility = View.VISIBLE
+        searchStatus.text = getString(R.string.searching, query)
+        findButton.isEnabled = false
+        mosqueField.dismissDropDown()
+        (getSystemService(INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)
+            ?.hideSoftInputFromWindow(mosqueField.windowToken, 0)
+
+        val main = Handler(Looper.getMainLooper())
+        val app = applicationContext
+        var mawaqitHits: List<MosqueSearch.Hit>? = null
+        var mawaqitFailed = false
+        var masjidboxDone = false
+        var masjidboxHit: MosqueSearch.Hit? = null
+
+        fun maybeFinish() {
+            if (mawaqitHits == null || !masjidboxDone) return
+            if (run != searchRun || isFinishing || isDestroyed) return
+            findButton.isEnabled = true
+            val ranked = MosqueSearch.rank(
+                mawaqitHits.orEmpty() + listOfNotNull(masjidboxHit) + MosqueSearch.recentHits(prefs, query)
+            ).take(6)
+            showResults(query, ranked, mawaqitFailed)
+        }
+
+        Thread {
+            val hits = try {
+                MosqueSearch.searchMawaqit(query)
+            } catch (e: Throwable) {
+                mawaqitFailed = true
+                emptyList()
+            }
+            main.post { mawaqitHits = hits; maybeFinish() }
+        }.start()
+
+        MosqueSearch.probeMasjidbox(app, query) { hit ->
+            masjidboxHit = hit
+            masjidboxDone = true
+            maybeFinish()
+        }
+    }
+
+    private fun showResults(query: String, hits: List<MosqueSearch.Hit>, mawaqitFailed: Boolean) {
+        val searchStatus = findViewById<TextView>(R.id.search_status)
+        val list = findViewById<LinearLayout>(R.id.search_results)
+        list.removeAllViews()
+        if (hits.isEmpty()) {
+            searchStatus.text = getString(R.string.search_none, query) +
+                if (mawaqitFailed) "\n" + getString(R.string.search_mawaqit_failed) else ""
+            return
+        }
+        val best = hits.first()
+        prefs.mosque(best.key).let { if (it.name == Prefs.titleFromSlug(best.key)) it.name = best.name }
+        mosqueField.setText(best.key, false)
+        selectMosque(best.key, refresh = true)
+        searchStatus.text = (if (hits.size > 1) getString(R.string.search_picked, best.name)
+            else getString(R.string.search_picked_only, best.name)) +
+            if (mawaqitFailed) "\n" + getString(R.string.search_mawaqit_failed) else ""
+        if (hits.size > 1) hits.forEach { list.addView(resultRow(it, list, hits)) }
+    }
+
+    /** One tappable result: name in bold, then the address and which service it's on. */
+    private fun resultRow(hit: MosqueSearch.Hit, list: LinearLayout, all: List<MosqueSearch.Hit>): View {
+        val dp = resources.displayMetrics.density
+        val selected = hit.key == slug
+        val row = TextView(this).apply {
+            val details = listOf(hit.place, hit.source).filter { it.isNotBlank() }.joinToString("  ·  ")
+            val title = (if (selected) "✓  " else "") + hit.name
+            text = android.text.SpannableStringBuilder(title).apply {
+                setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, title.length, 0)
+                append("\n").append(details)
+            }
+            textSize = 15f
+            setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
+            background = GradientDrawable().apply {
+                cornerRadius = 12 * dp
+                setColor(if (selected) MaterialColors.getColor(this@SettingsActivity,
+                    com.google.android.material.R.attr.colorSecondaryContainer, 0x22888888) else 0x00000000)
+            }
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = (4 * dp).toInt() }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                prefs.mosque(hit.key).let { if (it.name == Prefs.titleFromSlug(hit.key)) it.name = hit.name }
+                mosqueField.setText(hit.key, false)
+                selectMosque(hit.key, refresh = true)
+                findViewById<TextView>(R.id.search_status).text = getString(R.string.search_picked_only, hit.name)
+                list.removeAllViews()
+                all.forEach { list.addView(resultRow(it, list, all)) }
+            }
+        }
+        return row
     }
 
     private fun refresh() {

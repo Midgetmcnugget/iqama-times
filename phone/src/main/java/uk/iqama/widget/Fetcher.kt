@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 object Fetcher {
     private const val TAG = "IqamaWidgetFetch"
     private const val TIMEOUT_MS = 45_000L
+    private const val PROBE_TIMEOUT_MS = 18_000L
     private const val POLL_MS = 1_000L
     private const val MAX_AGE_MS = 6 * 60 * 60 * 1000L
 
@@ -36,8 +37,12 @@ object Fetcher {
             System.currentTimeMillis() - m.fetchedAt > MAX_AGE_MS ||
             PrayerTimes.fromJson(m.timesJson).isEmpty()
 
-    /** Fetches [slug]; [onDone] runs on the main thread with true if times were saved. */
-    fun fetch(context: Context, slug: String, onDone: (Boolean) -> Unit) {
+    /**
+     * Fetches [slug]; [onDone] runs on the main thread with true if times were saved.
+     * [probe]: only checking whether a page exists (mosque search), so give up sooner and
+     * don't record a failure against it.
+     */
+    fun fetch(context: Context, slug: String, probe: Boolean = false, onDone: (Boolean) -> Unit) {
         val app = context.applicationContext
         val m = Prefs(app).mosque(slug)
         if (m.isMawaqit) {
@@ -55,7 +60,7 @@ object Fetcher {
                     true
                 } catch (e: Throwable) {
                     Log.w(TAG, "Mawaqit fetch failed", e)
-                    m.lastError = e.message ?: "Couldn't reach Mawaqit"
+                    if (!probe) m.lastError = e.message ?: "Couldn't reach Mawaqit"
                     false
                 }
                 main.post { onDone(ok) }
@@ -64,10 +69,10 @@ object Fetcher {
         }
         main.post {
             try {
-                load(app, m, onDone)
+                load(app, m, probe, onDone)
             } catch (e: Throwable) {
                 Log.e(TAG, "WebView unavailable", e)
-                m.lastError = "WebView unavailable"
+                if (!probe) m.lastError = "WebView unavailable"
                 onDone(false)
             }
         }
@@ -90,7 +95,8 @@ object Fetcher {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun load(context: Context, m: Prefs.Mosque, onDone: (Boolean) -> Unit) {
+    private fun load(context: Context, m: Prefs.Mosque, probe: Boolean, onDone: (Boolean) -> Unit) {
+        val timeout = if (probe) PROBE_TIMEOUT_MS else TIMEOUT_MS
         val web = WebView(context)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
@@ -134,8 +140,10 @@ object Fetcher {
                     m.fetchedDay = today()
                     m.lastError = ""
                     finish(true)
-                } else if (System.currentTimeMillis() - started > TIMEOUT_MS) {
-                    m.lastError = if (text.contains("404") || text.contains("not found", true))
+                } else if (probe && System.currentTimeMillis() - started > 4_000L && looksMissing(text)) {
+                    finish(false)
+                } else if (System.currentTimeMillis() - started > timeout) {
+                    if (!probe) m.lastError = if (looksMissing(text))
                         "Mosque page not found" else "Times didn't appear on the page"
                     finish(false)
                 } else {
@@ -153,13 +161,17 @@ object Fetcher {
 
         main.postDelayed({
             if (!finished) {
-                m.lastError = "Masjidbox didn't respond"
+                if (!probe) m.lastError = "Masjidbox didn't respond"
                 finish(false)
             }
-        }, TIMEOUT_MS + 10_000L)
+        }, timeout + 10_000L)
 
         web.loadUrl(m.url, mapOf("Accept-Language" to "en-GB,en;q=0.9"))
     }
+
+    private fun looksMissing(text: String) =
+        text.contains("404") || text.contains("not found", true) || text.contains("doesn't exist", true) ||
+            text.contains("does not exist", true) || text.contains("no masjid", true)
 
     private fun decode(raw: String?): String {
         if (raw.isNullOrEmpty() || raw == "null") return ""

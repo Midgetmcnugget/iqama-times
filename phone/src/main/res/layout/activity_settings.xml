@@ -34,31 +34,6 @@
             android:layout_marginBottom="12dp"
             android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/source_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:selectionRequired="true"
-            app:singleSelection="true">
-
-            <Button
-                android:id="@+id/source_masjidbox"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/source_masjidbox" />
-
-            <Button
-                android:id="@+id/source_mawaqit"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/source_mawaqit" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/mosque_layout"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -72,13 +47,35 @@
                 android:layout_height="wrap_content"
                 android:completionThreshold="0"
                 android:imeOptions="actionDone"
-                android:inputType="textUri" />
+                android:inputType="textCapWords|textNoSuggestions" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/find_mosque"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/find_mosque" />
 
         <TextView
             android:id="@+id/mosque_help"
             style="@style/SettingsHelp"
             android:text="@string/mosque_help" />
+
+        <TextView
+            android:id="@+id/search_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/search_results"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/show_name"

@@ -36,7 +36,7 @@ object Mawaqit {
         return parse(JSONObject(json), today)
     }
 
-    private fun download(address: String): String {
+    fun download(address: String, json: Boolean = false): String {
         var url = URL(address)
         var conn: HttpURLConnection
         var redirects = 0
@@ -47,6 +47,11 @@ object Mawaqit {
             conn.readTimeout = 20_000
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) IqamaTimesWidget")
             conn.setRequestProperty("Accept-Language", "en-GB,en;q=0.9")
+            if (json) {
+                conn.setRequestProperty("Accept", "application/json")
+                conn.setRequestProperty("Referer", "https://mawaqit.net/en/")
+                conn.setRequestProperty("X-Requested-With", "XMLHttpRequest")
+            }
             val code = conn.responseCode
             if (code in 300..399 && redirects < 5) {
                 val loc = conn.getHeaderField("Location") ?: break

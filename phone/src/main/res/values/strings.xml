@@ -1,15 +1,18 @@
 <resources>
     <string name="app_name">Iqama Times</string>
     <string name="widget_name">Iqama Times</string>
-    <string name="widget_description">Your mosque\'s adhan and iqamah times from Masjidbox, with the next prayer highlighted</string>
+    <string name="widget_description">Your mosque\'s adhan and iqamah times from Masjidbox or Mawaqit, with the next prayer highlighted</string>
 
     <string name="heading_widget">Settings for this widget</string>
     <string name="heading_default">Default settings (used by new widgets)</string>
-    <string name="mosque_label">Mosque</string>
-    <string name="source_masjidbox">Masjidbox</string>
-    <string name="source_mawaqit">Mawaqit</string>
-    <string name="mosque_help">Pick a mosque you\'ve used, or type a new one: the part after masjidbox.com/prayer-times/ in its link, or paste the whole link.</string>
-    <string name="mosque_help_mawaqit">Pick a mosque you\'ve used, or type a new one: the part after mawaqit.net/en/ in its link, or paste the whole link (from the Mawaqit website, or Share in the Mawaqit app).</string>
+    <string name="mosque_label">Mosque name or link</string>
+    <string name="mosque_help">Type your mosque\'s name and tap Find. Add the town if the name is common (e.g. Masjid Al Falah Coventry). The best match is picked for you, and you can tap another if it\'s wrong. Mosques on Masjidbox and Mawaqit both work. You can also paste a link to the mosque\'s Masjidbox or Mawaqit page, or pick one you\'ve used before.</string>
+    <string name="find_mosque">Find</string>
+    <string name="searching">Looking for “%1$s” on Mawaqit and Masjidbox…</string>
+    <string name="search_none">No mosque found for “%1$s”. Try a shorter name or add the town, or paste the link to its Masjidbox or Mawaqit page.</string>
+    <string name="search_picked">Using %1$s (best match). Not right? Tap the correct one:</string>
+    <string name="search_picked_only">Using %1$s.</string>
+    <string name="search_mawaqit_failed">Couldn\'t search Mawaqit just now, so only Masjidbox was checked.</string>
     <string name="show_name">Show mosque name (on taller widgets)</string>
     <string name="show_sunrise">Show sunrise (Shuruq)</string>
     <string name="clock_12h">12-hour clock</string>

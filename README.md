@@ -66,9 +66,12 @@ The same times as a home-screen widget for Android phones (Android 8 or newer).
   both (stacked), optional fading of passed prayers and an optional outline for see-through
   widgets or busy pictures.
 * **Background:** colour (or phone theme), transparency, and an optional picture (frosted).
-* **Masjidbox or Mawaqit:** each widget can use a mosque from either service. Paste the mosque's
-  link (masjidbox.com/prayer-times/… or mawaqit.net/en/…), or pick the service and type its name
-  from the link. Mawaqit's adhan and iqamah times are read straight from its timetable data.
+* **Find a mosque by name:** type the mosque's name (add the town if it's common) and tap Find.
+  Mawaqit's mosque search is used, and the name is tried as a Masjidbox page address; the best
+  match is picked automatically and the other matches are listed to tap instead.
+* **Masjidbox or Mawaqit:** each widget can use a mosque from either service. You can also paste
+  the mosque's link (masjidbox.com/prayer-times/… or mawaqit.net/en/…). Mawaqit's adhan and
+  iqamah times are read straight from its timetable data.
 * Each widget can show a different mosque. **Allow exact timing** makes the highlight and
   countdown switch over exactly at each adhan and iqamah.
 
