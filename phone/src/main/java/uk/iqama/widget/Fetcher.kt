@@ -40,6 +40,28 @@ object Fetcher {
     fun fetch(context: Context, slug: String, onDone: (Boolean) -> Unit) {
         val app = context.applicationContext
         val m = Prefs(app).mosque(slug)
+        if (m.isMawaqit) {
+            // Mawaqit pages carry the timetable as data: read it directly, off the main thread.
+            Thread {
+                val ok = try {
+                    val r = Mawaqit.fetch(m.slug)
+                    if (!PrayerTimes.isUsable(r.prayers)) error("Times not found on the Mawaqit page")
+                    m.timesJson = PrayerTimes.toJson(r.prayers)
+                    r.name?.let { m.name = it }
+                    m.pageSnippet = ""
+                    m.fetchedAt = System.currentTimeMillis()
+                    m.fetchedDay = today()
+                    m.lastError = ""
+                    true
+                } catch (e: Throwable) {
+                    Log.w(TAG, "Mawaqit fetch failed", e)
+                    m.lastError = e.message ?: "Couldn't reach Mawaqit"
+                    false
+                }
+                main.post { onDone(ok) }
+            }.start()
+            return
+        }
         main.post {
             try {
                 load(app, m, onDone)

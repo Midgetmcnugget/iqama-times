@@ -5,8 +5,11 @@
 
     <string name="heading_widget">Settings for this widget</string>
     <string name="heading_default">Default settings (used by new widgets)</string>
-    <string name="mosque_label">Masjidbox mosque</string>
+    <string name="mosque_label">Mosque</string>
+    <string name="source_masjidbox">Masjidbox</string>
+    <string name="source_mawaqit">Mawaqit</string>
     <string name="mosque_help">Pick a mosque you\'ve used, or type a new one: the part after masjidbox.com/prayer-times/ in its link, or paste the whole link.</string>
+    <string name="mosque_help_mawaqit">Pick a mosque you\'ve used, or type a new one: the part after mawaqit.net/en/ in its link, or paste the whole link (from the Mawaqit website, or Share in the Mawaqit app).</string>
     <string name="show_name">Show mosque name (on taller widgets)</string>
     <string name="show_sunrise">Show sunrise (Shuruq)</string>
     <string name="clock_12h">12-hour clock</string>

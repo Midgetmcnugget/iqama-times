@@ -152,7 +152,10 @@ class Prefs(context: Context) {
             get() = p.getInt(k("maghrib_offset"), legacyOffset("maghrib_offset", 0))
             set(v) = p.edit().putInt(k("maghrib_offset"), v).apply()
 
-        val url: String get() = "https://masjidbox.com/prayer-times/$slug"
+        /** True if this mosque's times come from Mawaqit rather than Masjidbox. */
+        val isMawaqit: Boolean get() = Mawaqit.isMawaqit(slug)
+
+        val url: String get() = if (isMawaqit) Mawaqit.pageUrl(slug) else "https://masjidbox.com/prayer-times/$slug"
 
         /** The first version kept one set of offsets for all mosques; carry them over once. */
         private fun legacyOffset(key: String, def: Int): Int =
@@ -164,14 +167,31 @@ class Prefs(context: Context) {
         const val STYLE_GLASS = "glass"
         const val STYLE_STRIP = "strip"
 
-        /** "https://masjidbox.com/prayer-times/chingford-mosque?x" -> "chingford-mosque". */
+        /**
+         * The key a mosque is stored under:
+         *  "https://masjidbox.com/prayer-times/chingford-mosque" or "chingford-mosque" -> "chingford-mosque";
+         *  "https://mawaqit.net/en/some-mosque" or "mawaqit:some-mosque" -> "mawaqit:some-mosque".
+         */
         fun slug(input: String): String {
-            val t = input.trim().substringBefore('?').substringBefore('#').trim('/')
-            return t.substringAfterLast('/').lowercase().ifBlank { DEFAULT_MOSQUE }
+            val raw = input.trim()
+            val mawaqit = raw.startsWith(Mawaqit.PREFIX, ignoreCase = true) || raw.contains("mawaqit.net", ignoreCase = true)
+            val t = raw.removePrefix(Mawaqit.PREFIX).removePrefix(Mawaqit.PREFIX.uppercase())
+                .substringBefore('?').substringBefore('#').trim('/')
+            val last = t.substringAfterLast('/').lowercase()
+            if (last.isBlank()) return DEFAULT_MOSQUE
+            return if (mawaqit) Mawaqit.PREFIX + last else last
+        }
+
+        /** A name typed without a link: [mawaqit] says which service it is on. */
+        fun slug(input: String, mawaqit: Boolean): String {
+            val s = slug(input)
+            val looksLikeLink = input.contains("://") || input.contains(".net") || input.contains(".com") ||
+                input.trim().startsWith(Mawaqit.PREFIX, ignoreCase = true)
+            return if (mawaqit && !looksLikeLink && !Mawaqit.isMawaqit(s)) Mawaqit.PREFIX + s else s
         }
 
         fun titleFromSlug(slug: String): String =
-            slug.split('-', '_', ' ').filter { it.isNotBlank() }
+            Mawaqit.slugOf(slug).split('-', '_', ' ').filter { it.isNotBlank() }
                 .joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
     }
 }

@@ -45,6 +45,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var maghribSpinner: Spinner
 
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private lateinit var sourceGroup: MaterialButtonToggleGroup
     /** The mosque currently selected on this screen. */
     private var slug = Prefs.DEFAULT_MOSQUE
 
@@ -107,6 +108,15 @@ class SettingsActivity : AppCompatActivity() {
             val chosen = slugFromItem(parent.getItemAtPosition(pos).toString())
             mosqueField.setText(chosen, false)
             selectMosque(chosen, refresh = true)
+            showSource(Mawaqit.isMawaqit(chosen))
+        }
+
+        // Masjidbox or Mawaqit: decides how a bare name typed in the box is looked up.
+        sourceGroup = findViewById(R.id.source_group)
+        showSource(Mawaqit.isMawaqit(slug))
+        sourceGroup.addOnButtonCheckedListener { _, id, checked ->
+            if (checked) findViewById<TextView>(R.id.mosque_help).setText(
+                if (id == R.id.source_mawaqit) R.string.mosque_help_mawaqit else R.string.mosque_help)
         }
         // Always offer the whole list when the field is tapped.
         mosqueField.setOnClickListener { mosqueField.showDropDown() }
@@ -154,6 +164,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun forWidget() = widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
+
+    private fun showSource(mawaqit: Boolean) {
+        sourceGroup.check(if (mawaqit) R.id.source_mawaqit else R.id.source_masjidbox)
+        findViewById<TextView>(R.id.mosque_help).setText(if (mawaqit) R.string.mosque_help_mawaqit else R.string.mosque_help)
+    }
+
+    private fun mawaqitSelected() = sourceGroup.checkedButtonId == R.id.source_mawaqit
 
     /** Glass or strip look, plus the glass look's font and background picture. */
     private fun bindLook() {
@@ -366,8 +383,11 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveAndRefresh() {
         val typed = mosqueField.text.toString().trim()
-        if (typed.isNotEmpty() && slugFromItem(typed) != slug) selectMosque(slugFromItem(typed), refresh = false)
+        // A pasted link says which service it's from; a bare name uses the Masjidbox/Mawaqit switch.
+        val key = if (typed.contains("·")) slugFromItem(typed) else Prefs.slug(typed, mawaqitSelected())
+        if (typed.isNotEmpty() && key != slug) selectMosque(key, refresh = false)
         else prefs.rememberMosque(slug)
+        showSource(Mawaqit.isMawaqit(slug))
         mosqueField.setText(slug, false)
         refresh()
     }
