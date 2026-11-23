@@ -59,5 +59,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation("androidx.activity:activity:1.9.3")
     implementation(libs.google.material)
+    implementation("androidx.work:work-runtime:2.10.0")
     implementation(project(":api"))
 }

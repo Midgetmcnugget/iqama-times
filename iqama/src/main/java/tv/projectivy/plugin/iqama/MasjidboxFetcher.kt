@@ -40,11 +40,11 @@ object MasjidboxFetcher {
     @Volatile
     private var lastFailureAt = 0L
 
-    fun isStale(): Boolean {
+    fun isStale(ignoreBackoff: Boolean = false): Boolean {
         val due = Prefs.fetchedDay != today() ||
             System.currentTimeMillis() - Prefs.fetchedAt > MAX_AGE_MS ||
             PrayerTimes.fromJson(Prefs.timesJson).isEmpty()
-        return due && System.currentTimeMillis() - lastFailureAt > RETRY_AFTER_FAILURE_MS
+        return due && (ignoreBackoff || System.currentTimeMillis() - lastFailureAt > RETRY_AFTER_FAILURE_MS)
     }
 
     /**

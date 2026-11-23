@@ -18,6 +18,7 @@ class WallpaperProviderService : Service() {
     override fun onCreate() {
         super.onCreate()
         Prefs.init(this)
+        RefreshWorker.schedule(this)
     }
 
     override fun onBind(intent: Intent): IBinder = binder
@@ -28,7 +29,10 @@ class WallpaperProviderService : Service() {
             return try {
                 val ctx = applicationContext
                 if (MasjidboxFetcher.isStale()) {
+                    // The background job keeps the plugin running until the page has loaded;
+                    // it joins this fetch rather than starting a second one.
                     MasjidboxFetcher.refresh(ctx) { ok -> if (ok) notifyProjectivy(ctx) }
+                    RefreshWorker.runSoon(ctx)
                 }
                 val bitmap = WallpaperRenderer.render(ctx, Calendar.getInstance())
                 val uri = WallpaperImageProvider.save(ctx, bitmap)

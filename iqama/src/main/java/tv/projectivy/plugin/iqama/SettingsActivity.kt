@@ -11,6 +11,7 @@ class SettingsActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.init(this)
+        RefreshWorker.schedule(this)
 
         if (!isInstalled(PROJECTIVY)) {
             Toast.makeText(this, R.string.projectivy_not_installed, Toast.LENGTH_LONG).show()
