@@ -48,7 +48,7 @@ object WidgetRenderer {
 
     fun render(
         context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<IqamaWidget.Column>,
-        now: Calendar, wDp: Float, hDp: Float
+        now: Calendar, wDp: Float, hDp: Float, tomorrow: Boolean = false
     ): Result {
         val (w, h, u) = sizeFor(context, wDp, hDp)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -107,7 +107,10 @@ object WidgetRenderer {
             return Result(bmp, null)
         }
 
-        val nowMin = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        // Showing tomorrow (after Isha): count the time as a day earlier, so nothing has
+        // passed yet, Fajr is next, and its countdown runs to tomorrow.
+        val dayShift = if (tomorrow) 1 else 0
+        val nowMin = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) - dayShift * 24 * 60
         val nextIdx = IqamaWidget.nextIndex(cols, nowMin)
         val nextCol = cols.getOrNull(nextIdx)
         val lang = prefs.nameLanguage
@@ -152,6 +155,7 @@ object WidgetRenderer {
                 val midnight = (now.clone() as Calendar).apply {
                     set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                    add(Calendar.DAY_OF_YEAR, dayShift)
                 }
                 countdown = Countdown(
                     targetMillis = midnight.timeInMillis + target.second * 60_000L,

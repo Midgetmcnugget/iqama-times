@@ -135,6 +135,24 @@ class Prefs(context: Context) {
             get() = p.getString(k("fetched_day"), "") ?: ""
             set(v) = p.edit().putString(k("fetched_day"), v).apply()
 
+        /** The next day's times, once known (shown after Isha), and the day (yyyy-MM-dd) they're for. */
+        var tomorrowJson: String
+            get() = p.getString(k("times_next"), "") ?: ""
+            set(v) = p.edit().putString(k("times_next"), v).apply()
+
+        var tomorrowDay: String
+            get() = p.getString(k("next_day"), "") ?: ""
+            set(v) = p.edit().putString(k("next_day"), v).apply()
+
+        /** After midnight, yesterday's "tomorrow" times become today's. */
+        fun promoteIfNewDay() {
+            val today = Fetcher.today()
+            if (fetchedDay != today && tomorrowDay == today && tomorrowJson.isNotBlank()) {
+                timesJson = tomorrowJson
+                fetchedDay = today
+            }
+        }
+
         var lastError: String
             get() = p.getString(k("error"), "") ?: ""
             set(v) = p.edit().putString(k("error"), v).apply()

@@ -161,6 +161,8 @@ class SettingsFragment : GuidedStepSupportFragment() {
                     Prefs.mosque = value
                     Prefs.timesJson = ""   // old mosque's times no longer apply
                     Prefs.fetchedDay = ""
+                    Prefs.tomorrowJson = ""
+                    Prefs.tomorrowDay = ""
                     refreshNow()
                 }
                 setDescription(ID_MOSQUE, Prefs.mosque)

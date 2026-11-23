@@ -62,12 +62,27 @@ object WallpaperRenderer {
         return athan + if (key == "MAGHRIB") Prefs.maghribOffset else Prefs.iqamahOffset
     }
 
+    /** True once today's Isha iqamah (or adhan, if no iqamah) has passed. */
+    fun isAfterIsha(now: Calendar): Boolean {
+        val prayers = PrayerTimes.fromJson(Prefs.timesJson)
+        if (prayers.isEmpty()) return false
+        val isha = columns(prayers, now).firstOrNull { it.key == "ISHA" }?.sortTime ?: return false
+        return now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) >= isha
+    }
+
     fun render(context: Context, now: Calendar): Bitmap {
+        MasjidboxFetcher.promoteIfNewDay()
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         drawBackground(context, c)
 
-        val prayers = PrayerTimes.fromJson(Prefs.timesJson)
+        // After Isha, show tomorrow's times (or today's as a stand-in until they've been read).
+        val tomorrow = isAfterIsha(now)
+        val day = if (tomorrow) (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) } else now
+        val prayers = PrayerTimes.fromJson(
+            if (tomorrow && Prefs.tomorrowDay == MasjidboxFetcher.dayOf(day) && Prefs.tomorrowJson.isNotBlank())
+                Prefs.tomorrowJson else Prefs.timesJson
+        )
         val twelve = Prefs.clock12h
         // Chosen font (Google Fonts), or the TV's Roboto if none is set or it can't be loaded.
         val regular = Fonts.regular(context)
@@ -90,7 +105,8 @@ object WallpaperRenderer {
         val title = mosqueTitle()
         if (showName) c.drawText(title, left + pad, headerY, paint(WHITE, 38f, medium))
 
-        val nowMin = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        // Showing tomorrow: nothing has passed yet and Fajr is next.
+        val nowMin = if (tomorrow) -1 else now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
         if (prayers.isEmpty()) {
             val msg = if (Prefs.lastError.isNotBlank()) "Couldn't load times: ${Prefs.lastError}"
@@ -100,7 +116,7 @@ object WallpaperRenderer {
             return bmp
         }
 
-        val cols = columns(prayers, now)
+        val cols = columns(prayers, day)
         // The next prayer is highlighted. After Isha, highlight tomorrow's Fajr instead.
         val nextIdx = cols.indexOfFirst { col -> col.sortTime?.let { it > nowMin } == true }
             .let { if (it < 0 && cols.firstOrNull()?.sortTime != null) 0 else it }

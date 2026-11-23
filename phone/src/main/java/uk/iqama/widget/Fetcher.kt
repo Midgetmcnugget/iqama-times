@@ -11,6 +11,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import org.json.JSONArray
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
@@ -32,10 +33,18 @@ object Fetcher {
 
     fun today(): String = SimpleDateFormat("yyyy-MM-dd", Locale.UK).format(Date())
 
-    fun isStale(m: Prefs.Mosque): Boolean =
-        m.fetchedDay != today() ||
+    fun dayOf(cal: Calendar): String = SimpleDateFormat("yyyy-MM-dd", Locale.UK).format(cal.time)
+
+    fun tomorrow(): String = dayOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) })
+
+    fun isStale(m: Prefs.Mosque): Boolean {
+        m.promoteIfNewDay()
+        return m.fetchedDay != today() ||
             System.currentTimeMillis() - m.fetchedAt > MAX_AGE_MS ||
-            PrayerTimes.fromJson(m.timesJson).isEmpty()
+            PrayerTimes.fromJson(m.timesJson).isEmpty() ||
+            // After Isha the widget shows tomorrow: make sure we have tomorrow's times.
+            (m.tomorrowDay != tomorrow() && IqamaWidget.isAfterIsha(m, Calendar.getInstance()))
+    }
 
     /**
      * Fetches [slug]; [onDone] runs on the main thread with true if times were saved.
@@ -49,9 +58,14 @@ object Fetcher {
             // Mawaqit pages carry the timetable as data: read it directly, off the main thread.
             Thread {
                 val ok = try {
-                    val r = Mawaqit.fetch(m.slug)
+                    val next = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+                    val (r, r2) = Mawaqit.fetchDays(m.slug, Calendar.getInstance(), next)
                     if (!PrayerTimes.isUsable(r.prayers)) error("Times not found on the Mawaqit page")
                     m.timesJson = PrayerTimes.toJson(r.prayers)
+                    if (r2 != null && PrayerTimes.isUsable(r2.prayers)) {
+                        m.tomorrowJson = PrayerTimes.toJson(r2.prayers)
+                        m.tomorrowDay = dayOf(next)
+                    }
                     r.name?.let { m.name = it }
                     m.pageSnippet = ""
                     m.fetchedAt = System.currentTimeMillis()
@@ -133,11 +147,18 @@ object Fetcher {
                 val text = decode(raw)
                 val prayers = PrayerTimes.parse(text)
                 if (PrayerTimes.isUsable(prayers)) {
-                    m.timesJson = PrayerTimes.toJson(prayers)
+                    // Masjidbox shows one day. Read after Isha (with today's times already
+                    // saved), it's kept as tomorrow's, which the widget shows after Isha.
+                    if (m.fetchedDay == today() && IqamaWidget.isAfterIsha(m, Calendar.getInstance())) {
+                        m.tomorrowJson = PrayerTimes.toJson(prayers)
+                        m.tomorrowDay = tomorrow()
+                    } else {
+                        m.timesJson = PrayerTimes.toJson(prayers)
+                        m.fetchedDay = today()
+                    }
                     m.pageSnippet = PrayerTimes.snippet(text)
                     nameFromPage(text)?.let { m.name = it }
                     m.fetchedAt = System.currentTimeMillis()
-                    m.fetchedDay = today()
                     m.lastError = ""
                     finish(true)
                 } else if (probe && System.currentTimeMillis() - started > 4_000L && looksMissing(text)) {

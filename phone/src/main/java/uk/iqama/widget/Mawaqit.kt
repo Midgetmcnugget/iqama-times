@@ -29,6 +29,15 @@ object Mawaqit {
 
     data class Result(val name: String?, val prayers: List<Prayer>)
 
+    /** One download, two days: [day] (must work) and [next] (null if the timetable lacks it). */
+    fun fetchDays(key: String, day: Calendar, next: Calendar): Pair<Result, Result?> {
+        val html = download(pageUrl(key))
+        val json = JSONObject(extractConfData(html) ?: error("Times not found on the Mawaqit page"))
+        val first = parse(json, day)
+        val second = try { parse(json, next) } catch (_: Throwable) { null }
+        return first to second
+    }
+
     /** Downloads and reads today's times. Blocks: call off the main thread. Throws with a short reason on failure. */
     fun fetch(key: String, today: Calendar = Calendar.getInstance()): Result {
         val html = download(pageUrl(key))

@@ -103,10 +103,12 @@ class IqamaWidget : AppWidgetProvider() {
             val events = sortedSetOf<Int>()
             for (id in ids) {
                 val m = prefs.mosque(prefs.mosqueFor(id))
-                val cols = columns(m, now)
-                cols.forEach { c -> c.athan?.let { events.add(it) }; c.iqamah?.let { events.add(it) } }
+                val day = display(m, now)
+                val cols = day.cols
+                // Tomorrow's times are all "tomorrow", so the next wake-up is just after midnight.
+                if (!day.tomorrow) cols.forEach { c -> c.athan?.let { events.add(it) }; c.iqamah?.let { events.add(it) } }
                 try {
-                    manager.updateAppWidget(id, buildViews(context, prefs, m, cols, now, id, manager))
+                    manager.updateAppWidget(id, buildViews(context, prefs, m, cols, day.tomorrow, now, id, manager))
                 } catch (e: Throwable) {
                     android.util.Log.e("IqamaWidget", "Couldn't draw widget $id", e)
                 }
@@ -114,9 +116,27 @@ class IqamaWidget : AppWidgetProvider() {
             scheduleNextTick(context, now, events)
         }
 
+        /** What a widget shows: today's prayers, or tomorrow's once Isha has passed. */
+        data class Day(val cols: List<Column>, val tomorrow: Boolean)
+
+        /** True once today's Isha iqamah (or adhan, if no iqamah) has passed. */
+        fun isAfterIsha(m: Prefs.Mosque, now: Calendar): Boolean {
+            val isha = columns(m, now).firstOrNull { it.key == "ISHA" }?.endTime ?: return false
+            return now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) >= isha
+        }
+
+        fun display(m: Prefs.Mosque, now: Calendar): Day {
+            m.promoteIfNewDay()
+            if (!isAfterIsha(m, now)) return Day(columns(m, now), false)
+            val next = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+            // Tomorrow's times if we have them; otherwise today's stand in (they rarely change much).
+            val json = if (m.tomorrowDay == Fetcher.dayOf(next) && m.tomorrowJson.isNotBlank()) m.tomorrowJson else m.timesJson
+            return Day(columns(m, next, json), true)
+        }
+
         /** Today's columns: Fajr, Shuruq, Dhuhr (Jumu'ah on Fridays), Asr, Maghrib, Isha. */
-        fun columns(m: Prefs.Mosque, now: Calendar): List<Column> {
-            val byKey = PrayerTimes.fromJson(m.timesJson).associateBy { it.key }
+        fun columns(m: Prefs.Mosque, now: Calendar, json: String = m.timesJson): List<Column> {
+            val byKey = PrayerTimes.fromJson(json).associateBy { it.key }
             val friday = now.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
             return ORDER.map { key ->
                 val jumuah = byKey["JUMUAH1"]
@@ -165,13 +185,13 @@ class IqamaWidget : AppWidgetProvider() {
         }
 
         private fun buildViews(
-            context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>,
+            context: Context, prefs: Prefs, m: Prefs.Mosque, cols: List<Column>, tomorrow: Boolean,
             now: Calendar, widgetId: Int, manager: AppWidgetManager
         ): RemoteViews {
             val v = RemoteViews(context.packageName, R.layout.widget_picture)
             v.setOnClickPendingIntent(R.id.root, openSettings(context, widgetId))
             val (wDp, hDp) = sizeDp(manager, widgetId)
-            val result = WidgetRenderer.render(context, prefs, m, cols, now, wDp, hDp)
+            val result = WidgetRenderer.render(context, prefs, m, cols, now, wDp, hDp, tomorrow)
             v.setImageViewBitmap(R.id.picture, result.bitmap)
 
             val cd = result.countdown

@@ -10,6 +10,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import org.json.JSONArray
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,6 +39,19 @@ object MasjidboxFetcher {
 
     fun today(): String = SimpleDateFormat("yyyy-MM-dd", Locale.UK).format(Date())
 
+    fun dayOf(cal: Calendar): String = SimpleDateFormat("yyyy-MM-dd", Locale.UK).format(cal.time)
+
+    fun tomorrow(): String = dayOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) })
+
+    /** After midnight, the times read after last night's Isha become today's. */
+    fun promoteIfNewDay() {
+        val today = today()
+        if (Prefs.fetchedDay != today && Prefs.tomorrowDay == today && Prefs.tomorrowJson.isNotBlank()) {
+            Prefs.timesJson = Prefs.tomorrowJson
+            Prefs.fetchedDay = today
+        }
+    }
+
     /** After a failed attempt, wait this long before trying again automatically. */
     private const val RETRY_AFTER_FAILURE_MS = 15 * 60 * 1000L
 
@@ -45,7 +59,10 @@ object MasjidboxFetcher {
     private var lastFailureAt = 0L
 
     fun isStale(ignoreBackoff: Boolean = false): Boolean {
+        promoteIfNewDay()
         val due = Prefs.fetchedDay != today() ||
+            // After Isha tomorrow's times are shown: make sure we have them.
+            (Prefs.tomorrowDay != tomorrow() && WallpaperRenderer.isAfterIsha(Calendar.getInstance())) ||
             System.currentTimeMillis() - Prefs.fetchedAt > MAX_AGE_MS ||
             PrayerTimes.fromJson(Prefs.timesJson).isEmpty()
         return due && (ignoreBackoff || System.currentTimeMillis() - lastFailureAt > RETRY_AFTER_FAILURE_MS)
@@ -153,10 +170,17 @@ object MasjidboxFetcher {
                 val text = decodeJsString(raw)
                 val prayers = PrayerTimes.parse(text)
                 if (PrayerTimes.isUsable(prayers)) {
-                    Prefs.timesJson = PrayerTimes.toJson(prayers)
+                    // Masjidbox shows one day. Read after Isha (with today's times already
+                    // saved), it's kept as tomorrow's, which is what's shown after Isha.
+                    if (Prefs.fetchedDay == today() && WallpaperRenderer.isAfterIsha(Calendar.getInstance())) {
+                        Prefs.tomorrowJson = PrayerTimes.toJson(prayers)
+                        Prefs.tomorrowDay = tomorrow()
+                    } else {
+                        Prefs.timesJson = PrayerTimes.toJson(prayers)
+                        Prefs.fetchedDay = today()
+                    }
                     Prefs.pageSnippet = PrayerTimes.snippet(text)
                     Prefs.fetchedAt = System.currentTimeMillis()
-                    Prefs.fetchedDay = today()
                     Prefs.lastError = ""
                     Prefs.failSnippet = ""
                     Log.i(TAG, "Read ${prayers.size} prayers")

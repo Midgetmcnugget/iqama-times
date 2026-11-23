@@ -127,7 +127,15 @@ object Prefs {
         get() = p.getString(KEY_FETCHED_DAY, "") ?: ""
         set(value) = p.edit().putString(KEY_FETCHED_DAY, value).apply()
 
-    /** The part of the page the times were read from, shown in settings for troubleshooting. */
+    /** The next day's times, read after Isha (shown then), and the day (yyyy-MM-dd) they're for. */
+    var tomorrowJson: String
+        get() = p.getString("times_next", "") ?: ""
+        set(value) = p.edit().putString("times_next", value).apply()
+
+    var tomorrowDay: String
+        get() = p.getString("next_day", "") ?: ""
+        set(value) = p.edit().putString("next_day", value).apply()
+
     /** What the page showed the last time reading it failed (for troubleshooting). */
     var failSnippet: String
         get() = p.getString("fail_snippet", "") ?: ""
