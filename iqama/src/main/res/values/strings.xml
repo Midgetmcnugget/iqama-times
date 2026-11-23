@@ -41,5 +41,5 @@
     <string name="setting_background_empty">None (pattern background). Click to paste an image link.</string>
     <string name="setting_refresh_title">Refresh times now</string>
     <string name="refreshing">Fetching times from Masjidbox…</string>
-    <string name="refresh_failed">Couldn\'t read times. Check the mosque name and the TV\'s internet connection.</string>
+    <string name="refresh_failed">Failed: %1$s. Details on the left.</string>
 </resources>

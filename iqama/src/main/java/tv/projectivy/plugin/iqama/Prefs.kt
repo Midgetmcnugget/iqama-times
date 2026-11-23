@@ -128,6 +128,11 @@ object Prefs {
         set(value) = p.edit().putString(KEY_FETCHED_DAY, value).apply()
 
     /** The part of the page the times were read from, shown in settings for troubleshooting. */
+    /** What the page showed the last time reading it failed (for troubleshooting). */
+    var failSnippet: String
+        get() = p.getString("fail_snippet", "") ?: ""
+        set(value) = p.edit().putString("fail_snippet", value).apply()
+
     var pageSnippet: String
         get() = p.getString(KEY_PAGE_SNIPPET, "") ?: ""
         set(value) = p.edit().putString(KEY_PAGE_SNIPPET, value).apply()

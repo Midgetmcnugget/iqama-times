@@ -361,7 +361,8 @@ class SettingsFragment : GuidedStepSupportFragment() {
         MasjidboxFetcher.refresh(app) { ok ->
             WallpaperProviderService.notifyProjectivy(app, prefsChanged = true)
             if (isAdded) {
-                setDescription(ID_REFRESH, if (ok) statusText() else getString(R.string.refresh_failed) + " (" + Prefs.lastError + ")")
+                setDescription(ID_REFRESH, if (ok) statusText()
+                    else getString(R.string.refresh_failed, Prefs.lastError.ifBlank { "unknown reason" }))
                 guidanceStylist.descriptionView?.text =
                     "v${BuildConfig.VERSION_NAME}\n\n${getString(R.string.plugin_description)}\n\n${timesSummary()}"
             }
@@ -409,9 +410,11 @@ class SettingsFragment : GuidedStepSupportFragment() {
 
     private fun timesSummary(): String {
         val prayers = PrayerTimes.fromJson(Prefs.timesJson)
-        if (prayers.isEmpty()) return "No times yet."
+        val failed = if (Prefs.lastError.isNotBlank())
+            "Last refresh failed: ${Prefs.lastError}\n${Prefs.failSnippet}\n\n" else ""
+        if (prayers.isEmpty()) return failed + "No times yet."
         val twelve = Prefs.clock12h
-        return prayers.joinToString("\n") { p ->
+        return failed + prayers.joinToString("\n") { p ->
             val iq = p.iqamah?.let { "iqamah " + PrayerTimes.format(it, twelve) }
             val ad = p.athan?.let { "adhan " + PrayerTimes.format(it, twelve) }
             PrayerTimes.label(p.key) + (if (p.key == "JUMUAH2") " 2" else "") + ": " + listOfNotNull(iq, ad).joinToString(", ")

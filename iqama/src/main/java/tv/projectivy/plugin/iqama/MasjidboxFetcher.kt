@@ -158,12 +158,15 @@ object MasjidboxFetcher {
                     Prefs.fetchedAt = System.currentTimeMillis()
                     Prefs.fetchedDay = today()
                     Prefs.lastError = ""
+                    Prefs.failSnippet = ""
                     Log.i(TAG, "Read ${prayers.size} prayers")
                     finish(true)
                 } else if (System.currentTimeMillis() - started > TIMEOUT_MS) {
                     Prefs.lastError = if (text.contains("404") || text.contains("not found", true))
                         "Mosque page not found" else "Times didn't appear on the page"
                     Log.w(TAG, "Timed out; page text starts: ${text.take(200)}")
+                    Prefs.failSnippet = "Page: " + (web.url ?: Prefs.mosqueUrl) + "\n" +
+                        (if (text.isBlank()) "(the page was blank)" else PrayerTimes.snippet(text, 30))
                     finish(false)
                 } else {
                     main.postAtTime(poll, web, android.os.SystemClock.uptimeMillis() + POLL_MS)
@@ -182,6 +185,7 @@ object MasjidboxFetcher {
         main.postDelayed({
             if (!finished) {
                 Prefs.lastError = "Masjidbox didn't respond"
+                Prefs.failSnippet = "Page: " + Prefs.mosqueUrl + "\n(the page never finished loading)"
                 finish(false)
             }
         }, TIMEOUT_MS + 10_000L)
