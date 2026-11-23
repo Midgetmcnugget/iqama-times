@@ -37,12 +37,16 @@ object BackgroundImage {
         }
         if (f.exists() && src.exists() && src.readText() == url) return
         try {
-            var conn = URL(url).openConnection() as HttpURLConnection
+            fun open(u: URL) = (u.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 15_000
+                readTimeout = 30_000
+            }
+            var conn = open(URL(url))
             var redirects = 0
             while (conn.responseCode in 300..399 && redirects < 5) {
                 val loc = conn.getHeaderField("Location") ?: break
                 conn.disconnect()
-                conn = URL(URL(url), loc).openConnection() as HttpURLConnection
+                conn = open(URL(URL(url), loc))
                 redirects++
             }
             if (conn.responseCode != 200) {
@@ -50,7 +54,7 @@ object BackgroundImage {
             }
             if (conn.inputStream.use { copyIn(context, it) }) src.writeText(url)
             conn.disconnect()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "Couldn't download background", e)
         }
     }

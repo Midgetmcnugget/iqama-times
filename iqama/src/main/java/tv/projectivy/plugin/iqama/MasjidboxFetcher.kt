@@ -25,6 +25,10 @@ object MasjidboxFetcher {
     private const val TAG = "IqamaFetcher"
     private const val TIMEOUT_MS = 45_000L
     private const val POLL_MS = 1_000L
+    private const val STUCK_MS = 90_000L
+
+    @Volatile
+    private var startedAt = 0L
 
     /** Refresh when the stored times are for another day or older than this. */
     private const val MAX_AGE_MS = 6 * 60 * 60 * 1000L
@@ -54,23 +58,39 @@ object MasjidboxFetcher {
     fun refresh(context: Context, onDone: (Boolean) -> Unit = {}) {
         val start = synchronized(waiters) {
             waiters.add(onDone)
-            running.compareAndSet(false, true)
+            // A fetch that has run far too long is treated as dead, so it can't block every
+            // later refresh (that is what left the times stuck before).
+            if (running.get() && System.currentTimeMillis() - startedAt > STUCK_MS) {
+                Log.w(TAG, "Previous fetch never finished; starting again")
+                running.set(false)
+            }
+            running.compareAndSet(false, true).also { if (it) startedAt = System.currentTimeMillis() }
         }
         if (!start) return  // already fetching; we'll be told when it ends
         val app = context.applicationContext
+        val run = startedAt
+        // Belt and braces: whatever happens inside, this fetch ends within STUCK_MS.
+        main.postDelayed({
+            if (running.get() && startedAt == run) {
+                Prefs.lastError = "Took too long"
+                complete(false)
+            }
+        }, STUCK_MS)
         main.post {
             try {
                 load(app) { ok ->
+                    if (startedAt != run) return@load  // a fetch given up on earlier
                     lastFailureAt = if (ok) 0L else System.currentTimeMillis()
-                    if (ok) {
-                        // Download the optional background image off the main thread.
-                        Thread {
+                    // Times are saved: finish now. The optional background picture is
+                    // downloaded separately so it can never hold the refresh up.
+                    complete(ok)
+                    if (ok) Thread {
+                        try {
                             BackgroundImage.refresh(app)
-                            main.post { complete(true) }
-                        }.start()
-                    } else {
-                        complete(false)
-                    }
+                        } catch (e: Throwable) {
+                            Log.w(TAG, "Background picture failed", e)
+                        }
+                    }.start()
                 }
             } catch (e: Throwable) {
                 Log.e(TAG, "WebView unavailable", e)
@@ -85,6 +105,7 @@ object MasjidboxFetcher {
     /** Ends the current fetch and tells everyone who asked for it. Main thread. */
     private fun complete(ok: Boolean) {
         val toNotify = synchronized(waiters) {
+            if (!running.get() && waiters.isEmpty()) return
             running.set(false)
             waiters.toList().also { waiters.clear() }
         }
