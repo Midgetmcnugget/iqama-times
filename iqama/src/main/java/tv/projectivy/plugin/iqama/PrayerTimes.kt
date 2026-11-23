@@ -55,6 +55,9 @@ object PrayerTimes {
             for (w in words) {
                 if (s == w) return kind to ""
                 if (s.startsWith("$w ")) return kind to line.trim().substring(w.length).trim().trimStart(':').trim()
+                // "Iqamah6:45" / "Iqamah+15": no space between the label and its value.
+                if (s.length > w.length && s.startsWith(w) && (s[w.length].isDigit() || s[w.length] == '+'))
+                    return kind to line.trim().substring(w.length).trim()
             }
         }
         return null
@@ -62,6 +65,7 @@ object PrayerTimes {
 
     private val hhmm = Regex("^(\\d{1,2})[:.](\\d{2})\\s*([AaPp][Mm])?$")
     private val num = Regex("^\\d{1,2}$")
+    private val twoDigits = Regex("^\\d{2}$")
     /** Iqamah given as minutes after the athan: "+15", "+ 15 min", "15 mins after". */
     private val offset = Regex("^\\+\\s*(\\d{1,3})\\s*(M|MIN|MINS|MINUTES|')?(\\s*AFTER)?$|^(\\d{1,3})\\s*(M|MIN|MINS|MINUTES|')(\\s*AFTER)?$", RegexOption.IGNORE_CASE)
     private val dash = Regex("^[-–—]{1,3}$")
@@ -142,8 +146,63 @@ object PrayerTimes {
      *   Fajr / 06:30 / 06:45                  -> table with ATHAN / IQAMAH column headers
      *   SHURUQ / 7 / 15  or  Shuruq / 07:08 / --  -> a single time
      */
+    /**
+     * Evens out layouts the page has used: a time split over lines ("5" / ":" / "46"),
+     * and a name or label with its time on the same line ("Fajr 5:46", "Iqamah6:45").
+     */
+    private fun tidy(raw: List<String>): List<String> {
+        val joined = mutableListOf<String>()
+        var i = 0
+        while (i < raw.size) {
+            val a = raw[i]
+            val b = raw.getOrNull(i + 1)
+            val c = raw.getOrNull(i + 2)
+            when {
+                num.matches(a) && b != null && (b == ":" || b == ".") && c != null && twoDigits.matches(c) -> {
+                    joined += "$a:$c"; i += 3
+                }
+                Regex("^\\d{1,2}[:.]$").matches(a) && b != null && twoDigits.matches(b) -> {
+                    joined += a.dropLast(1) + ":" + b; i += 2
+                }
+                num.matches(a) && b != null && Regex("^[:.]\\d{2}$").matches(b) -> {
+                    joined += a + ":" + b.drop(1); i += 2
+                }
+                // "5" / "18 PM" or "18PM" (12-hour pages)
+                num.matches(a) && b != null && Regex("^\\d{2}\\s*[AaPp][Mm]$").matches(b) -> {
+                    joined += a + ":" + b.take(2) + " " + b.drop(2).trim().uppercase(); i += 2
+                }
+                else -> { joined += a; i++ }
+            }
+        }
+        // "5:18" / "PM" -> "5:18 PM"
+        val withAmPm = mutableListOf<String>()
+        for (line in joined) {
+            val last = withAmPm.lastOrNull()
+            if (last != null && Regex("^[AaPp][Mm]$").matches(line) && Regex("^\\d{1,2}[:.]\\d{2}$").matches(last))
+                withAmPm[withAmPm.size - 1] = "$last ${line.uppercase()}"
+            else withAmPm += line
+        }
+        val out = mutableListOf<String>()
+        for (line in withAmPm) splitLine(line, out)
+        return out
+    }
+
+    private val nameThenTime = Regex("^(.*?[\\p{L}'’])\\s*(\\d{1,2}[:.]\\d{2}(?:\\s*[AaPp][Mm])?)\\s*(.*)$")
+
+    /** "Fajr 5:46 Iqamah 6:45" -> "Fajr", "5:46", "Iqamah", "6:45" (only for known names and labels). */
+    private fun splitLine(line: String, out: MutableList<String>) {
+        if (parseHhmm(line) != null) { out += line; return }
+        val m = nameThenTime.matchEntire(line)
+        val head = m?.groupValues?.get(1)?.trim()
+        if (m == null || head == null || (normaliseName(head) == null && labelOf(head) == null)) { out += line; return }
+        out += head
+        out += m.groupValues[2].trim()
+        val rest = m.groupValues[3].trim()
+        if (rest.isNotEmpty()) splitLine(rest, out)
+    }
+
     fun parse(pageText: String): List<Prayer> {
-        val lines = pageText.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val lines = tidy(pageText.lines().map { it.trim() }.filter { it.isNotEmpty() })
         val iqamahFirst = iqamahColumnFirst(lines)
         val found = LinkedHashMap<String, Prayer>()
         var i = 0
